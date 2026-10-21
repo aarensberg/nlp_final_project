@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Model weights, embeddings, cached logits (rebuilt by the pipeline)
+artifacts/
+.DS_Store

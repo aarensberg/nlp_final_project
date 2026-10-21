@@ -7,7 +7,18 @@ authors = [
     { name = "aarensberg", email = "sandro.arens@icloud.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "accelerate>=1.15.0",
+    "datasets>=5.1.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "pandas>=3.0.6",
+    "scikit-learn>=1.9.1",
+    "sentence-transformers>=6.2.0",
+    "torch>=2.14.1",
+    "tqdm>=4.70.1",
+    "transformers>=5.20.2",
+]
 
 [project.scripts]
 nlp-final-project = "nlp_final_project:main"

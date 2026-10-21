@@ -1,0 +1,452 @@
+{
+  "model_dir": "/Users/charl/Documents/albert/m1/data/deep Learning for Sequential data and NLP/nlp_final_project/artifacts/classifier",
+  "test": {
+    "n": 10000,
+    "accuracy": 0.8635,
+    "micro_f1": 0.8635,
+    "macro_f1": 0.7627145791964226,
+    "weighted_f1": 0.8532964439290581,
+    "micro_f1_95ci": [
+      0.8565975,
+      0.8702099999999999
+    ],
+    "macro_f1_95ci": [
+      0.7519563296151334,
+      0.7746595619640879
+    ]
+  },
+  "validation": {
+    "n": 10000,
+    "accuracy": 0.8637,
+    "micro_f1": 0.8637,
+    "macro_f1": 0.7757579395635769,
+    "weighted_f1": 0.8542183755917314
+  },
+  "test_unseen_only": {
+    "n": 9718,
+    "accuracy": 0.8613912327639432,
+    "micro_f1": 0.8613912327639432,
+    "macro_f1": 0.7610331816590142,
+    "weighted_f1": 0.8510434300250292
+  },
+  "by_frequency_bucket": {
+    "head": 0.8962986328828663,
+    "torso": 0.7772968214746658,
+    "tail": 0.6189061154659907
+  },
+  "worst_classes": [
+    {
+      "label": "Applicable Laws",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 53,
+      "train_count": 352,
+      "bucket": "torso",
+      "baseline_f1": 0.3,
+      "ensemble_f1": 0.273972602739726
+    },
+    {
+      "label": "Assigns",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 4,
+      "train_count": 31,
+      "bucket": "tail",
+      "baseline_f1": 0.0,
+      "ensemble_f1": 0.0
+    },
+    {
+      "label": "Books",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 2,
+      "train_count": 23,
+      "bucket": "tail",
+      "baseline_f1": 1.0,
+      "ensemble_f1": 1.0
+    },
+    {
+      "label": "Qualifications",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 5,
+      "train_count": 47,
+      "bucket": "tail",
+      "baseline_f1": 0.5714285714285714,
+      "ensemble_f1": 0.5714285714285714
+    },
+    {
+      "label": "Jurisdictions",
+      "precision": 0.2857142857142857,
+      "recall": 0.06896551724137931,
+      "f1": 0.1111111111111111,
+      "support": 29,
+      "train_count": 202,
+      "bucket": "tail",
+      "baseline_f1": 0.4,
+      "ensemble_f1": 0.34782608695652173
+    },
+    {
+      "label": "Tax Withholdings",
+      "precision": 0.7272727272727273,
+      "recall": 0.10666666666666667,
+      "f1": 0.18604651162790697,
+      "support": 75,
+      "train_count": 380,
+      "bucket": "torso",
+      "baseline_f1": 0.6938775510204082,
+      "ensemble_f1": 0.6938775510204082
+    },
+    {
+      "label": "Indemnity",
+      "precision": 0.625,
+      "recall": 0.1724137931034483,
+      "f1": 0.2702702702702703,
+      "support": 29,
+      "train_count": 271,
+      "bucket": "tail",
+      "baseline_f1": 0.7346938775510204,
+      "ensemble_f1": 0.7346938775510204
+    },
+    {
+      "label": "Enforcements",
+      "precision": 0.6153846153846154,
+      "recall": 0.19047619047619047,
+      "f1": 0.2909090909090909,
+      "support": 42,
+      "train_count": 201,
+      "bucket": "tail",
+      "baseline_f1": 0.6756756756756757,
+      "ensemble_f1": 0.6944444444444444
+    },
+    {
+      "label": "Defined Terms",
+      "precision": 0.7272727272727273,
+      "recall": 0.2857142857142857,
+      "f1": 0.41025641025641024,
+      "support": 56,
+      "train_count": 354,
+      "bucket": "torso",
+      "baseline_f1": 0.7058823529411765,
+      "ensemble_f1": 0.6956521739130435
+    },
+    {
+      "label": "Venues",
+      "precision": 0.6666666666666666,
+      "recall": 0.3,
+      "f1": 0.41379310344827586,
+      "support": 20,
+      "train_count": 131,
+      "bucket": "tail",
+      "baseline_f1": 0.5,
+      "ensemble_f1": 0.5142857142857142
+    },
+    {
+      "label": "Agreements",
+      "precision": 0.5,
+      "recall": 0.375,
+      "f1": 0.42857142857142855,
+      "support": 48,
+      "train_count": 252,
+      "bucket": "tail",
+      "baseline_f1": 0.6111111111111112,
+      "ensemble_f1": 0.5866666666666667
+    },
+    {
+      "label": "Costs",
+      "precision": 0.4,
+      "recall": 0.5333333333333333,
+      "f1": 0.45714285714285713,
+      "support": 15,
+      "train_count": 168,
+      "bucket": "tail",
+      "baseline_f1": 0.6,
+      "ensemble_f1": 0.6
+    }
+  ],
+  "top_confusions": [
+    {
+      "true": "Tax Withholdings",
+      "predicted": "Withholdings",
+      "count": 65
+    },
+    {
+      "true": "Applicable Laws",
+      "predicted": "Governing Laws",
+      "count": 42
+    },
+    {
+      "true": "Defined Terms",
+      "predicted": "Definitions",
+      "count": 39
+    },
+    {
+      "true": "Integration",
+      "predicted": "Entire Agreements",
+      "count": 30
+    },
+    {
+      "true": "Taxes",
+      "predicted": "Withholdings",
+      "count": 26
+    },
+    {
+      "true": "Successors",
+      "predicted": "Binding Effects",
+      "count": 23
+    },
+    {
+      "true": "Modifications",
+      "predicted": "Amendments",
+      "count": 23
+    },
+    {
+      "true": "Warranties",
+      "predicted": "Representations",
+      "count": 23
+    },
+    {
+      "true": "Indemnity",
+      "predicted": "Indemnifications",
+      "count": 22
+    },
+    {
+      "true": "Authorizations",
+      "predicted": "Authority",
+      "count": 20
+    },
+    {
+      "true": "Interpretations",
+      "predicted": "Construction",
+      "count": 19
+    },
+    {
+      "true": "No Waivers",
+      "predicted": "Waivers",
+      "count": 18
+    },
+    {
+      "true": "Warranties",
+      "predicted": "Survival",
+      "count": 17
+    },
+    {
+      "true": "Successors",
+      "predicted": "Assignments",
+      "count": 14
+    },
+    {
+      "true": "Construction",
+      "predicted": "Interpretations",
+      "count": 13
+    }
+  ],
+  "calibration": {
+    "temperature": 1.0369127988815308,
+    "ece_test_before": 0.02850348758585753,
+    "ece_test_after": 0.019822486193478078,
+    "abstain_threshold_for_95pct_val_accuracy": 0.8508285284042358,
+    "test_coverage_at_threshold": 0.7637,
+    "test_accuracy_when_answering": 0.9482781196805028,
+    "test_accuracy_on_abstained": 0.5895048666948793
+  },
+  "coverage_curve_test": [
+    {
+      "coverage": 1.0,
+      "threshold": 0.05638297647237778,
+      "accuracy": 0.8635
+    },
+    {
+      "coverage": 0.975,
+      "threshold": 0.4034417264163495,
+      "accuracy": 0.8782564102564102
+    },
+    {
+      "coverage": 0.95,
+      "threshold": 0.4920573800802232,
+      "accuracy": 0.8911578947368421
+    },
+    {
+      "coverage": 0.925,
+      "threshold": 0.5461848556995391,
+      "accuracy": 0.9018378378378379
+    },
+    {
+      "coverage": 0.9,
+      "threshold": 0.5948250293731688,
+      "accuracy": 0.9117777777777778
+    },
+    {
+      "coverage": 0.875,
+      "threshold": 0.6430399939417839,
+      "accuracy": 0.9180571428571429
+    },
+    {
+      "coverage": 0.85,
+      "threshold": 0.6989168226718904,
+      "accuracy": 0.926235294117647
+    },
+    {
+      "coverage": 0.825,
+      "threshold": 0.752072435617447,
+      "accuracy": 0.9345454545454546
+    },
+    {
+      "coverage": 0.8,
+      "threshold": 0.7989896059036254,
+      "accuracy": 0.941125
+    },
+    {
+      "coverage": 0.775,
+      "threshold": 0.8390147224068641,
+      "accuracy": 0.9460645161290323
+    },
+    {
+      "coverage": 0.75,
+      "threshold": 0.8648139089345932,
+      "accuracy": 0.9518666666666666
+    },
+    {
+      "coverage": 0.725,
+      "threshold": 0.8873179137706757,
+      "accuracy": 0.9558620689655173
+    },
+    {
+      "coverage": 0.7,
+      "threshold": 0.9054579973220825,
+      "accuracy": 0.9602857142857143
+    },
+    {
+      "coverage": 0.675,
+      "threshold": 0.9157600820064544,
+      "accuracy": 0.9635555555555556
+    },
+    {
+      "coverage": 0.65,
+      "threshold": 0.9210925459861756,
+      "accuracy": 0.9663076923076923
+    },
+    {
+      "coverage": 0.625,
+      "threshold": 0.9243124574422836,
+      "accuracy": 0.96816
+    },
+    {
+      "coverage": 0.6,
+      "threshold": 0.9303426384925843,
+      "accuracy": 0.9701666666666666
+    },
+    {
+      "coverage": 0.575,
+      "threshold": 0.9395401880145073,
+      "accuracy": 0.9730434782608696
+    },
+    {
+      "coverage": 0.55,
+      "threshold": 0.9468299210071563,
+      "accuracy": 0.974909090909091
+    },
+    {
+      "coverage": 0.525,
+      "threshold": 0.9521291583776474,
+      "accuracy": 0.9780952380952381
+    },
+    {
+      "coverage": 0.5,
+      "threshold": 0.9573228061199188,
+      "accuracy": 0.9786
+    }
+  ],
+  "baseline_test": {
+    "n": 10000,
+    "accuracy": 0.877,
+    "micro_f1": 0.877,
+    "macro_f1": 0.8219376759941999,
+    "weighted_f1": 0.8733171991864076,
+    "micro_f1_95ci": [
+      0.8702,
+      0.8837
+    ],
+    "macro_f1_95ci": [
+      0.8089008973964639,
+      0.8303455954898138
+    ]
+  },
+  "mcnemar_vs_baseline": {
+    "model_right_baseline_wrong": 362,
+    "baseline_right_model_wrong": 497,
+    "p_value": 4.62918237575014e-06
+  },
+  "ensemble_test": {
+    "n": 10000,
+    "accuracy": 0.8843,
+    "micro_f1": 0.8843,
+    "macro_f1": 0.8284264197285587,
+    "weighted_f1": 0.8800999630391132,
+    "micro_f1_95ci": [
+      0.8777975,
+      0.8906
+    ],
+    "macro_f1_95ci": [
+      0.8156518912480032,
+      0.8371692555461085
+    ],
+    "weight_bert": 0.2,
+    "temperature_baseline": 0.9052509665489197,
+    "val_macro_f1_by_weight": {
+      "0.0": 0.8188420577829894,
+      "0.05": 0.821713386875311,
+      "0.1": 0.8255818261223802,
+      "0.15000000000000002": 0.8271929045323497,
+      "0.2": 0.8290460462469723,
+      "0.25": 0.8240693321982193,
+      "0.30000000000000004": 0.8238486692812534,
+      "0.35000000000000003": 0.8236841136287179,
+      "0.4": 0.8228667772442738,
+      "0.45": 0.8208275274619921,
+      "0.5": 0.8252502781675185,
+      "0.55": 0.8206150346578684,
+      "0.6000000000000001": 0.8159519891600392,
+      "0.65": 0.8110340130258853,
+      "0.7000000000000001": 0.8063878280702597,
+      "0.75": 0.7998950465354775,
+      "0.8": 0.7955766259253696,
+      "0.8500000000000001": 0.787220720451316,
+      "0.9": 0.7806495854572344,
+      "0.9500000000000001": 0.778421325689826,
+      "1.0": 0.7757579395635769
+    }
+  },
+  "ensemble_test_unseen_only": {
+    "n": 9718,
+    "accuracy": 0.8811483844412431,
+    "micro_f1": 0.8811483844412431,
+    "macro_f1": 0.8249079358907382,
+    "weighted_f1": 0.8767665325006465
+  },
+  "mcnemar_ensemble_vs_baseline": {
+    "model_right_baseline_wrong": 106,
+    "baseline_right_model_wrong": 33,
+    "p_value": 3.979392264405063e-10
+  },
+  "ensemble_by_frequency_bucket": {
+    "head": 0.9038858978042552,
+    "torso": 0.8360309097849504,
+    "tail": 0.7478055094827084
+  },
+  "baseline_by_frequency_bucket": {
+    "head": 0.8978659839671288,
+    "torso": 0.8275899666114559,
+    "tail": 0.7427565067743147
+  },
+  "ensemble_calibration": {
+    "ece_test": 0.01669275030058933,
+    "abstain_threshold_for_95pct_val_accuracy": 0.7088638269559552,
+    "test_coverage_at_threshold": 0.842,
+    "test_accuracy_when_answering": 0.9451306413301662
+  }
+}
