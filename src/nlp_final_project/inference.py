@@ -36,10 +36,12 @@ CONFIG_COPY = REPORTS / "inference_config.json"  # committed copy (artifacts/ is
 VARIANTS = ("ensemble", "bert", "tfidf")
 TARGET_ACCURACY = 0.95  # abstention target, met on validation
 WEIGHT_GRID = [round(x, 2) for x in np.linspace(0, 1, 21)]
-# Bump when the meaning of cached logits or of the saved config changes.
-# 2: numeric context in cache keys; tie-aware thresholds (None = abstain on all);
-#    macro-F1 over the fixed 100-label universe.
-INFERENCE_SCHEMA = 2
+# Versions, bumped when the MEANING of an artifact changes.
+# Logits cache: 2 = numeric context (backend, precision, versions) in the cache key.
+LOGITS_SCHEMA = 2
+# Inference config: 2 = tie-aware thresholds (None = abstain on all); 3 = ensemble weight
+# selected with the standard macro-F1 (fixed 100 labels, zero_division=0).
+CONFIG_SCHEMA = 3
 CONFIDENCE_NOTE = ("Confidence = calibrated score that the clause TYPE is correct. It is not a "
                    "probability that the clause is legally valid, enforceable or risk-free.")
 
@@ -92,7 +94,22 @@ def labels_fingerprint(names: list[str]) -> str:
     return sha256_json(names)
 
 
+class ConfigMismatchError(RuntimeError):
+    pass
+
+
 # -------------------------------------------------------------- raw scores ----
+def check_label_outputs(classes, n_outputs: int, n_labels: int, what: str) -> None:
+    """A classifier must output exactly n_labels scores, column j = label index j."""
+    classes = np.asarray(classes)
+    if n_outputs != n_labels:
+        raise ConfigMismatchError(f"{what}: {n_outputs} outputs, expected {n_labels}")
+    if classes.shape != (n_labels,) or not np.array_equal(classes, np.arange(n_labels)):
+        bad = sorted(set(range(n_labels)) - set(classes.tolist()))[:5]
+        raise ConfigMismatchError(f"{what}: classes are not exactly 0..{n_labels - 1} in order"
+                                  + (f" (missing e.g. {bad})" if bad else " (wrong order)"))
+
+
 class _Bert:
     def __init__(self):
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -103,6 +120,8 @@ class _Bert:
         self.max_length = load_json(BERT_DIR / "training_config.json")["max_length"]
         cfg = self.model.config
         self.labels = [cfg.id2label[i] for i in range(cfg.num_labels)]
+        check_label_outputs(np.arange(cfg.num_labels), self.model.classifier.out_features,
+                            len(label_names()), "bert")
 
     def logits(self, texts: list[str]) -> np.ndarray:
         from .train import predict_logits, tokenize
@@ -115,6 +134,7 @@ class _Tfidf:
     def __init__(self):
         b = joblib.load(TFIDF_PATH)
         self.vec, self.clf = b["vectorizer"], b["classifier"]
+        check_label_outputs(self.clf.classes_, self.clf.coef_.shape[0], len(label_names()), "tfidf")
 
     def logits(self, texts: list[str]) -> np.ndarray:
         return self.clf.decision_function(self.vec.transform(texts)).astype(np.float64)
@@ -128,7 +148,7 @@ def split_logits(split: str, which: str) -> tuple[np.ndarray, np.ndarray]:
     """
     fp = bert_fingerprint() if which == "bert" else tfidf_fingerprint()
     ctx = bert_numeric_context() if which == "bert" else tfidf_numeric_context()
-    meta = {"schema": INFERENCE_SCHEMA, "model": which, **fp, "numeric_context": ctx,
+    meta = {"schema": LOGITS_SCHEMA, "model": which, **fp, "numeric_context": ctx,
             "data": split_fingerprint(split)}
     X, y = split_arrays(split)
     model_cls = _Bert if which == "bert" else _Tfidf
@@ -155,7 +175,7 @@ def fit_inference_config() -> dict:
     thresholds = {v: d["threshold"] for v, d in details.items()}
 
     cfg = {
-        "schema": INFERENCE_SCHEMA,
+        "schema": CONFIG_SCHEMA,
         "created_from": "validation split only (test never used to choose a parameter)",
         "macro_f1_definition": MACRO_F1_DEFINITION,
         "labels": names,
@@ -196,10 +216,6 @@ class Prediction:
     top: list[tuple[str, float]]
 
 
-class ConfigMismatchError(RuntimeError):
-    pass
-
-
 class Predictor:
     """Applies the saved, validation-chosen configuration. Refuses stale artifacts."""
 
@@ -224,8 +240,8 @@ class Predictor:
         cfg_labels = [load_json(BERT_DIR / "config.json")["id2label"][str(i)] for i in range(len(self.names))]
         if cfg_labels != self.names:
             problems.append("bert id2label order")
-        if self.cfg.get("schema") != INFERENCE_SCHEMA:
-            problems.append(f"config schema {self.cfg.get('schema')} != {INFERENCE_SCHEMA}")
+        if self.cfg.get("schema") != CONFIG_SCHEMA:
+            problems.append(f"config schema {self.cfg.get('schema')} != {CONFIG_SCHEMA}")
         if problems:
             raise ConfigMismatchError("inference config does not match current artifacts: "
                                       + ", ".join(problems) + ". Re-run `evaluate` to refit it.")

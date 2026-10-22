@@ -12,6 +12,7 @@ USAGE = """usage: nlp-final-project <command> [options]      (each command accep
   index      build (if needed) + evaluate the clause-bank retrieval index
   search     query the clause bank:  search "termination with 30 days notice"
   audit      bias and failure-mode audit (needs `evaluate` first)
+  manifest   write reports/run_manifest.json (versions, hashes, commands; ~10 s)
   all        eda, evaluate, index, audit  (never trains; needs existing models)
 """
 
@@ -66,6 +67,9 @@ def main(argv=None) -> None:
         from .audit import run
         run()
         print("audit written to reports/audit.json and reports/figures/")
+    elif cmd == "manifest":
+        from .manifest import cli
+        cli(args)
     elif cmd == "all":
         from .config import ARTIFACTS
         missing = [p for p in (ARTIFACTS / "classifier" / "model.safetensors", ARTIFACTS / "baseline.joblib")

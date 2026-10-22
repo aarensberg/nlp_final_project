@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-COMMANDS = ["eda", "baseline", "train", "evaluate", "classify", "index", "search", "audit", "all"]
+COMMANDS = ["eda", "baseline", "train", "evaluate", "classify", "index", "search", "audit", "manifest", "all"]
 
 
 def _run(root, *args, timeout=120):
@@ -74,3 +74,17 @@ def test_cache_invalidated_by_numeric_context_only(tmp_path):
     same_weights_other_backend = meta | {"numeric_context": {"backend": "cpu", "precision": "float32"}}
     cached_npz(tmp_path / "c.npz", same_weights_other_backend, f, log=lambda m: None)
     assert len(calls) == 2
+
+
+def test_manifest_schema_without_artifacts(tmp_path):
+    """Manifest in an empty root: schema complete, artifacts marked absent, no absolute path."""
+    r = _run(tmp_path, "manifest")
+    assert r.returncode == 0, r.stderr[-1500:]
+    import json
+    m = json.loads((tmp_path / "reports" / "run_manifest.json").read_text())
+    from nlp_final_project.manifest import REQUIRED_KEYS
+    assert set(REQUIRED_KEYS) <= set(m)
+    assert m["artifacts"]["bert_weights"]["present"] is False
+    assert "T" in m["generated_at"] and ("+" in m["generated_at"] or "Z" in m["generated_at"])
+    text = json.dumps(m)
+    assert str(tmp_path) not in text and "/Users/" not in text and "/home/" not in text

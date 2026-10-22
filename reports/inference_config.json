@@ -1,7 +1,7 @@
 {
-  "schema": 2,
+  "schema": 3,
   "created_from": "validation split only (test never used to choose a parameter)",
-  "macro_f1_definition": "mean over the fixed universe of 100 labels; F1_c = 2TP/(n_true+n_pred); F1_c = 1 when label c has neither true nor predicted examples",
+  "macro_f1_definition": "primary: mean over the fixed universe of labels 0..99; F1_c = 2TP/(n_true+n_pred); F1_c = 0 when label c has neither true nor predicted examples (= sklearn labels=range(100), average='macro', zero_division=0)",
   "labels": [
     "Adjustments",
     "Agreements",
@@ -156,17 +156,17 @@
       "0.35": 0.8236841136287179,
       "0.4": 0.8228667772442738,
       "0.45": 0.8208275274619921,
-      "0.5": 0.8269977753858432,
-      "0.55": 0.8224088843112898,
-      "0.6": 0.8177924692684388,
-      "0.65": 0.8129236728956266,
-      "0.7": 0.8083239497895569,
-      "0.75": 0.8018960960701229,
-      "0.8": 0.797620859666116,
-      "0.85": 0.7893485132468028,
-      "0.9": 0.782843089602662,
-      "0.95": 0.7806371124329275,
-      "1.0": 0.778000360167941
+      "0.5": 0.8169977753858432,
+      "0.55": 0.8124088843112898,
+      "0.6": 0.8077924692684388,
+      "0.65": 0.8029236728956266,
+      "0.7": 0.7983239497895569,
+      "0.75": 0.7918960960701229,
+      "0.8": 0.787620859666116,
+      "0.85": 0.7793485132468028,
+      "0.9": 0.772843089602662,
+      "0.95": 0.7706371124329275,
+      "1.0": 0.768000360167941
     }
   },
   "abstention": {

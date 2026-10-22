@@ -1,0 +1,58 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+<project>/src/nlp_final_project/metrics.py:154: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+  return float(log_t.exp())
+findfont: Failed to find font weight semibold for DejaVu Sans, now using 700.
+{
+  "ensemble": {
+    "n": 10000,
+    "accuracy": 0.8843,
+    "micro_f1": 0.8843,
+    "macro_f1": 0.8284264197285587,
+    "weighted_f1": 0.8800999630391132,
+    "n_labels_in_universe": 100,
+    "n_labels_present_in_truth": 100,
+    "micro_f1_95ci": [
+      0.8777975,
+      0.8906
+    ],
+    "macro_f1_95ci": [
+      0.8117314995532641,
+      0.836802016465268
+    ]
+  },
+  "bert": {
+    "n": 10000,
+    "accuracy": 0.8635,
+    "micro_f1": 0.8635,
+    "macro_f1": 0.7627145791964226,
+    "weighted_f1": 0.8532964439290581,
+    "n_labels_in_universe": 100,
+    "n_labels_present_in_truth": 100,
+    "micro_f1_95ci": [
+      0.8565975,
+      0.8702099999999999
+    ],
+    "macro_f1_95ci": [
+      0.7518001133405193,
+      0.770312935548664
+    ]
+  },
+  "tfidf": {
+    "n": 10000,
+    "accuracy": 0.877,
+    "micro_f1": 0.877,
+    "macro_f1": 0.8219376759941999,
+    "weighted_f1": 0.8733171991864076,
+    "n_labels_in_universe": 100,
+    "n_labels_present_in_truth": 100,
+    "micro_f1_95ci": [
+      0.8702,
+      0.8837
+    ],
+    "macro_f1_95ci": [
+      0.8052260630573989,
+      0.8299712201044335
+    ]
+  }
+}

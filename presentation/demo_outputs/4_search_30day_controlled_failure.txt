@@ -1,0 +1,18 @@
+(period filter: clauses mentioning any of [30] day(s); 824 eligible. Mentioning a duration does not mean it is the requested notice period: the role of the duration is not checked)
+
+[1] Notices  (score 0.0302)
+    In the event Participant believes that a “Good Reason” event has been triggered, Participant must give the Company written notice within 30 days of the first occurrence of such triggering event and a proposed termination date which shall be not sooner than 60 days nor later than 90 days after the date of such notice . Such notice shall specify Participant’s basis for determining that “Good Reason”
+
+[2] Notices  (score 0.0298)
+    Notwithstanding the foregoing, it shall be a condition precedent to the Company’s right to terminate the Executive’s employment for Cause and the Executive’s right to terminate employment for Good Reason that (i) the Party seeking the termination shall first have given the other Party written notice stating with specificity the reason for the termination (“ breach ”) and (ii) if such breach is sus
+
+[3] Terms  (score 0.0294)
+    The term of this Agreement shall be for a period of ______ and shall be automatically extended for additional ______ terms on the same conditions as set forth herein unless earlier terminated by either Party for any reason upon prior written notice to the other, such termination to become effective thirty (30) days from the date of such notice. This Agreement shall terminate immediately upon User’
+
+[4] Terminations  (score 0.0286)
+    This Agreement will terminate upon the expiration of the Term.  The Company may terminate the Agreement with or without Cause (as defined below) , upon providing  Consultant with written notice of such termination pursuant to Section  13.G of this Agreement (the “ Termination Notice ”) .   In the event the Company terminates this Agreement without Cause, the Company shall pay Consultant all amount
+
+[5] Disability  (score 0.0280)
+    If the Company determines in good faith that the Executive has incurred a Disability, the Company shall give the Executive a minimum of thirty (30) days’ written notice of its intention to terminate the Executive’s employment after the 180 day period referenced in Section 1(i) (the “Disability Notice”). In such event, the Executive’s employment with the Company shall terminate effective on the 30t
+
+[16 s]

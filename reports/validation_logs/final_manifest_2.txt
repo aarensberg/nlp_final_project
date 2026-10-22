@@ -1,0 +1,2 @@
+W1022 18:34:41.601000 85173 torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+manifest written: reports/run_manifest.json (commit 1c2b565696b57410cb61847597e37d2b8b6d5281, dirty=True, 17 report files, 17 commands)

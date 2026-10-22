@@ -1,7 +1,7 @@
 [project]
 name = "nlp-final-project"
 version = "0.1.0"
-description = "Add your description here"
+description = "Contract-clause classification (Legal-BERT + TF-IDF ensemble with calibrated abstention), clause-bank retrieval and failure-mode audit on LEDGAR (LexGLUE)"
 readme = "README.md"
 authors = [
     { name = "aarensberg", email = "sandro.arens@icloud.com" }

@@ -1,0 +1,47 @@
+{
+  "config": {
+    "model_name": "nlpaueb/legal-bert-base-uncased",
+    "max_length": 256,
+    "batch_size": 16,
+    "eval_batch_size": 64,
+    "lr": 3e-05,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.06,
+    "epochs": 2,
+    "grad_clip": 1.0,
+    "patience": 1,
+    "amp": true,
+    "seed": 42,
+    "max_train": null,
+    "max_val": null,
+    "output_dir": "/Users/charl/Documents/albert/m1/data/deep Learning for Sequential data and NLP/nlp_final_project/artifacts/classifier",
+    "ckpt_every": 300,
+    "resume": true
+  },
+  "device": "mps",
+  "epochs": [
+    {
+      "n": 10000,
+      "accuracy": 0.8418,
+      "micro_f1": 0.8418,
+      "macro_f1": 0.7402101027967419,
+      "weighted_f1": 0.8297695893114391,
+      "epoch": 1,
+      "train_loss": 1.2070372533162435,
+      "elapsed_min": 68.63258406718572
+    },
+    {
+      "n": 10000,
+      "accuracy": 0.8637,
+      "micro_f1": 0.8637,
+      "macro_f1": 0.7757579395635769,
+      "weighted_f1": 0.8542183755917314,
+      "epoch": 2,
+      "train_loss": 0.4749299633026123,
+      "elapsed_min": 146.45899122953415
+    }
+  ],
+  "best_epoch": 2,
+  "best_val_macro_f1": 0.7757579395635769,
+  "train_minutes": 146.49744156599044
+}

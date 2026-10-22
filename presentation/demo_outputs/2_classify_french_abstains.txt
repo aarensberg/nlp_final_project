@@ -1,0 +1,6 @@
+variant      : ensemble  (threshold 0.709, chosen on validation)
+predicted    : Amendments  (confidence 0.033)
+decision     : ABSTAIN - below the confidence threshold, send to a lawyer
+candidates   : Amendments 0.033 | Severability 0.031 | Notices 0.030
+note         : Confidence = calibrated score that the clause TYPE is correct. It is not a probability that the clause is legally valid, enforceable or risk-free.
+[10 s]

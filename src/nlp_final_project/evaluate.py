@@ -24,7 +24,7 @@ from .config import FIGURES, REPORTS, SEED, save_json
 from .data import frequency_buckets, label_names, split_arrays
 from .inference import VARIANTS, Predictor, fit_inference_config, split_logits
 from .metrics import (MACRO_F1_DEFINITION, answers, bootstrap_ci, core_metrics, coverage_curve, ece, macro_f1,
-                      per_class, reliability, softmax, top_confusions)
+                      macro_sensitivity, per_class, reliability, softmax, top_confusions)
 from .retrieval import norm_hash
 
 LABEL = {"ensemble": "Combination (BERT 0.2 + TF-IDF 0.8)", "bert": "Legal-BERT alone",
@@ -111,6 +111,8 @@ def run() -> dict:
             "description": LABEL[v],
             "test": core_metrics(yt, pred) | bootstrap_ci(yt, pred),
             "validation": core_metrics(yv, pv[v].argmax(1)),
+            "sensitivity_macro_f1_absent_both_counts_one": {
+                "test": macro_sensitivity(yt, pred), "validation": macro_sensitivity(yv, pv[v].argmax(1))},
             "test_without_train_duplicates": core_metrics(yt[unseen], pred[unseen]),
             "macro_f1_by_frequency_bucket": {
                 b: float(np.mean([r["f1"] for r in pc if r["bucket"] == b])) for b in ("head", "torso", "tail")},
@@ -160,7 +162,7 @@ def _write_csv(per_cls, names) -> None:
                     f"{v}_f1": round(r["f1"], 4)}
         rows.append(row)
     with open(REPORTS / "per_class_test.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
         w.writeheader()
         w.writerows(sorted(rows, key=lambda r: -r["test_support"]))
 

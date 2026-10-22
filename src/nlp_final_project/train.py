@@ -5,7 +5,8 @@ dynamic padding -> AdamW + linear warm-up/decay -> evaluate on validation after
 each epoch -> keep the checkpoint with the best macro-F1 (early stopping).
 
 Run:  uv run nlp-final-project train                  # full run
-      uv run nlp-final-project train --resume         # continue after an interruption
+      uv run nlp-final-project train --resume         # continue after an interruption (fails if no checkpoint)
+      uv run nlp-final-project train --resume-if-present   # resume if a checkpoint exists, else new run
       uv run nlp-final-project train --max-train 2000 --epochs 1   # smoke test
 
 Progress is written to artifacts/progress.json; a full checkpoint (weights,
@@ -29,6 +30,7 @@ import argparse
 import json
 import math
 import random
+import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -64,7 +66,8 @@ class TrainConfig:
     max_val: int | None = None  # subsample validation (smoke tests only)
     output_dir: str = str(ARTIFACTS / "classifier")
     ckpt_every: int = 300  # steps between resumable checkpoints
-    resume: bool = False
+    resume: bool = False  # strict: fail if no checkpoint exists
+    resume_if_present: bool = False  # lenient: resume if a checkpoint exists, else start a new run
 
 
 # ---------------------------------------------------------------- data ----
@@ -260,7 +263,14 @@ def fit(cfg: TrainConfig, model, enc_tr: list[list[int]], ytr: np.ndarray, enc_v
     ckpt = Path(cfg.output_dir + "_checkpoint") / "state.pt"
     default_run = Path(cfg.output_dir) == ARTIFACTS / "classifier"
     progress_path = ARTIFACTS / "progress.json" if default_run else Path(cfg.output_dir + "_progress.json")
-    if cfg.resume and ckpt.exists():
+    if cfg.resume and cfg.resume_if_present:
+        raise ResumeError("use either --resume (strict) or --resume-if-present, not both")
+    if cfg.resume and not ckpt.exists():
+        raise ResumeError(f"--resume requested but no checkpoint at {ckpt.parent.name}/{ckpt.name}; "
+                          "use --resume-if-present to start a new run when none exists")
+    if cfg.resume_if_present and not ckpt.exists():
+        print("no checkpoint found: starting a new run (--resume-if-present)", file=sys.stderr)
+    if (cfg.resume or cfg.resume_if_present) and ckpt.exists():
         saved = torch.load(ckpt, map_location="cpu", weights_only=False)
         check_resume_compatible(saved.get("config"), cfg)
         model.load_state_dict(saved["model"])

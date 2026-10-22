@@ -196,25 +196,54 @@ def test_threshold_empty_input_and_zero_coverage():
 
 
 # ---------------------------------------------------------------- macro-F1 ----
+from sklearn.metrics import f1_score  # noqa: E402
+
+from nlp_final_project.metrics import bootstrap_ci, macro_f1_absent_one, macro_sensitivity  # noqa: E402
+
+
+def _sk(y, p, n=100):
+    return f1_score(y, p, labels=range(n), average="macro", zero_division=0)
+
+
+def test_macro_f1_single_wrong_example_is_zero_not_098():
+    y, p = np.array([3]), np.array([7])
+    assert macro_f1(y, p) == 0.0 == _sk(y, p)
+    assert macro_f1_absent_one(y, p) == pytest.approx(0.98)  # old convention: 98 absent labels count 1
+
+
+@pytest.mark.parametrize("seed, n_labels, n, missing", [
+    (0, 10, 50, []), (1, 10, 30, [3, 7]), (2, 100, 400, list(range(90, 100))), (3, 100, 10_000, []),
+])
+def test_macro_f1_equals_sklearn(seed, n_labels, n, missing):
+    rng = np.random.default_rng(seed)
+    allowed = np.setdiff1d(np.arange(n_labels), missing)
+    y = rng.choice(allowed, n)
+    p = np.where(rng.random(n) < 0.7, y, rng.choice(allowed, n))
+    assert macro_f1(y, p, n_labels) == pytest.approx(_sk(y, p, n_labels), abs=1e-12)
+
+
 def test_macro_f1_fixed_universe_when_a_class_disappears():
     y = np.array([0, 0, 1, 2])
     p = np.array([0, 0, 1, 1])
-    full = macro_f1(y, p, n_labels=3)               # F1 = 1, 2/3, 0
-    assert full == pytest.approx((1 + 2 / 3 + 0) / 3)
-    sub = macro_f1(y[:3], p[:3], n_labels=3)       # class 2 vanished from truth AND predictions
-    assert sub == pytest.approx((1 + 1 + 1) / 3)   # denominator stays 3; absent class counts 1
-    assert macro_f1(y[:3], p[:3], n_labels=3, absent_value=0.0) == pytest.approx(2 / 3)
-    from sklearn.metrics import f1_score
-    # sklearn's implicit universe silently drops the class -> different denominator (2)
-    assert f1_score(y[:3], p[:3], average="macro") == pytest.approx(1.0)
+    assert macro_f1(y, p, n_labels=3) == pytest.approx((1 + 2 / 3 + 0) / 3)
+    sub = macro_f1(y[:3], p[:3], n_labels=3)  # class 2 vanished from truth AND predictions
+    assert sub == pytest.approx((1 + 1 + 0) / 3) == pytest.approx(_sk(y[:3], p[:3], 3))
+    assert macro_f1_absent_one(y[:3], p[:3], n_labels=3) == pytest.approx(1.0)  # sensitivity only
+    assert f1_score(y[:3], p[:3], average="macro") == pytest.approx(1.0)  # implicit universe: drops it
 
 
-def test_macro_f1_matches_sklearn_when_all_labels_present():
-    from sklearn.metrics import f1_score
+def test_point_bootstrap_and_sensitivity_use_consistent_definitions():
     rng = np.random.default_rng(0)
-    y = np.r_[np.arange(10), rng.integers(0, 10, 300)]
-    p = np.where(rng.random(310) < 0.7, y, rng.integers(0, 10, 310))
-    assert macro_f1(y, p, n_labels=10) == pytest.approx(f1_score(y, p, average="macro"))
+    y = rng.integers(0, 100, 2000)
+    p = np.where(rng.random(2000) < 0.8, y, rng.integers(0, 100, 2000))
+    point = macro_f1(y, p)
+    ci = bootstrap_ci(y, p, n_boot=200)["macro_f1_95ci"]
+    assert ci[0] <= point <= ci[1]
+    # the bootstrap applies the same function: recompute the first resample by hand
+    idx = np.random.default_rng(0).integers(0, 2000, 2000)
+    assert macro_f1(y[idx], p[idx]) == pytest.approx(_sk(y[idx], p[idx]))
+    sens = macro_sensitivity(y, p, n_boot=50)
+    assert sens["macro_f1_absent_one"] >= point
 
 
 # ------------------------------------------------------- filtered ranking ----

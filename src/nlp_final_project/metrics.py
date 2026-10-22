@@ -1,14 +1,17 @@
 """Metrics shared by the baseline, the fine-tuned model and the audit.
 
-Macro-F1 definition (used everywhere: point scores, bootstrap, paired bootstrap,
-weight selection). The label universe is FIXED to the 100 LEDGAR labels:
+Macro-F1 definition (PRIMARY, used everywhere: point scores, bootstrap, paired
+bootstrap, ensemble-weight selection). Standard convention with a FIXED universe:
 
-    F1_c = 2 TP_c / (n_true_c + n_pred_c)        macro-F1 = mean over the 100 labels
-    F1_c = 1 if label c has no true and no predicted example (no error is possible)
+    F1_c = 2 TP_c / (n_true_c + n_pred_c)        macro-F1 = mean over labels 0..99
+    F1_c = 0 if label c has no true and no predicted example
 
-A fixed universe keeps every resample on the same denominator. scikit-learn's
-default instead averages over the labels present in y_true or y_pred, so a class
-that vanishes from a bootstrap resample silently leaves the average.
+identical to sklearn `f1_score(y, p, labels=range(100), average="macro",
+zero_division=0)`. A fixed universe keeps every resample on the same denominator
+(sklearn's default averages only over labels present in y or p).
+
+SENSITIVITY ONLY (never a headline score): `macro_f1_absent_one` counts a label
+absent from both truth and predictions as F1 = 1.
 """
 
 from __future__ import annotations
@@ -18,12 +21,16 @@ import torch
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 
 N_LABELS = 100  # LEDGAR label universe
-MACRO_F1_DEFINITION = ("mean over the fixed universe of 100 labels; F1_c = 2TP/(n_true+n_pred); "
-                       "F1_c = 1 when label c has neither true nor predicted examples")
+MACRO_F1_DEFINITION = ("primary: mean over the fixed universe of labels 0..99; F1_c = 2TP/(n_true+n_pred); "
+                       "F1_c = 0 when label c has neither true nor predicted examples (= sklearn "
+                       "labels=range(100), average='macro', zero_division=0)")
+MACRO_F1_SENSITIVITY_DEFINITION = ("sensitivity only: same, but F1_c = 1 when label c has neither true "
+                                   "nor predicted examples")
 
 
 def macro_f1(y_true: np.ndarray, y_pred: np.ndarray, n_labels: int = N_LABELS,
-             absent_value: float = 1.0) -> float:
+             absent_value: float = 0.0) -> float:
+    """PRIMARY macro-F1 (absent_value=0). Other values are for the sensitivity analysis only."""
     y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
     tp = np.bincount(y_true[y_true == y_pred], minlength=n_labels)[:n_labels]
     denom = (np.bincount(y_true, minlength=n_labels)[:n_labels]
@@ -63,6 +70,27 @@ def bootstrap_ci(y_true, y_pred, n_boot: int = 1000, seed: int = 0, n_labels: in
         ma.append(macro_f1(y_true[idx], y_pred[idx], n_labels))
     q = lambda a: [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]  # noqa: E731
     return {"micro_f1_95ci": q(mi), "macro_f1_95ci": q(ma)}
+
+
+def macro_f1_absent_one(y_true, y_pred, n_labels: int = N_LABELS) -> float:
+    """SENSITIVITY ONLY: a label absent from both truth and predictions counts F1 = 1."""
+    return macro_f1(y_true, y_pred, n_labels, absent_value=1.0)
+
+
+def macro_sensitivity(y_true, y_pred, n_boot: int = 1000, seed: int = 0, n_labels: int = N_LABELS) -> dict:
+    """Point score and bootstrap CI under the alternative convention, same resamples as bootstrap_ci."""
+    rng = np.random.default_rng(seed)
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    n = len(y_true)
+    vals = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        vals.append(macro_f1_absent_one(y_true[idx], y_pred[idx], n_labels))
+    return {"definition": MACRO_F1_SENSITIVITY_DEFINITION,
+            "macro_f1_absent_one": macro_f1_absent_one(y_true, y_pred, n_labels),
+            "macro_f1_absent_one_95ci": [float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))],
+            "n_labels_absent_from_truth_and_predictions": int(
+                n_labels - len(np.union1d(np.unique(y_true), np.unique(y_pred))))}
 
 
 def per_class(y_true, y_pred, names: list[str]) -> list[dict]:

@@ -156,3 +156,24 @@ def test_saved_thresholds_meet_the_target_on_the_validation_set_they_accept(pred
         acc = answers(p.max(1), predictor.threshold(v))
         assert acc.any()
         assert (p.argmax(1)[acc] == yv[acc]).mean() >= target, v
+
+
+def test_weight_selection_and_reports_use_the_standard_macro_f1(predictor):
+    """Weight grid scores (validation) and test point scores = sklearn zero_division=0 on range(100)."""
+    from sklearn.metrics import f1_score
+    from nlp_final_project.inference import split_logits
+    from nlp_final_project.metrics import softmax
+    lb, yv = split_logits("validation", "bert")
+    lt, _ = split_logits("validation", "tfidf")
+    c = predictor.cfg
+    pb, pt = softmax(lb, c["bert"]["temperature"]), softmax(lt, c["tfidf"]["temperature"])
+    for w, score in c["ensemble"]["val_macro_f1_by_weight"].items():
+        pred = (float(w) * pb + (1 - float(w)) * pt).argmax(1)
+        assert score == pytest.approx(f1_score(yv, pred, labels=range(100), average="macro", zero_division=0))
+    report = json.loads((REPORTS / "eval_metrics.json").read_text())
+    lbt, yt = split_logits("test", "bert")
+    ltt, _ = split_logits("test", "tfidf")
+    probs = predictor.probs_from_logits(lbt, ltt)
+    for v in ("ensemble", "bert", "tfidf"):
+        sk = f1_score(yt, probs[v].argmax(1), labels=range(100), average="macro", zero_division=0)
+        assert report["variants"][v]["test"]["macro_f1"] == pytest.approx(sk, abs=1e-12)

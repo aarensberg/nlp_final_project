@@ -30,6 +30,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from functools import cached_property
 
 import numpy as np
@@ -138,6 +139,63 @@ class Hit:
     text: str
 
 
+INDEX_FILES = ("embeddings.npy", "labels.npy", "texts.json")
+
+
+class IndexIntegrityError(RuntimeError):
+    pass
+
+
+def write_index_files(index_dir: Path, texts: list[str], labels: np.ndarray, emb: np.ndarray,
+                      extra_meta: dict) -> dict:
+    """Write the three index files and a meta.json with their hashes, sizes and shapes."""
+    index_dir.mkdir(parents=True, exist_ok=True)
+    np.save(index_dir / "embeddings.npy", np.asarray(emb, dtype=np.float32))
+    np.save(index_dir / "labels.npy", np.asarray(labels))
+    (index_dir / "texts.json").write_text(json.dumps(texts))
+    meta = dict(extra_meta) | {
+        "n_clauses": len(texts), "dim": int(emb.shape[1]),
+        "files": {f: {"sha256": sha256_file(index_dir / f), "bytes": (index_dir / f).stat().st_size}
+                  for f in INDEX_FILES},
+        "shapes": {"embeddings.npy": list(emb.shape), "labels.npy": [len(labels)], "texts.json": [len(texts)]},
+    }
+    save_json(meta, index_dir / "meta.json")
+    return meta
+
+
+def validate_index_files(index_dir: Path, expected_spec: dict | None = None) -> tuple[list[str], dict]:
+    """Return (problems, meta). Checks presence, SHA-256, sizes, shapes, length equality and spec."""
+    meta_path = index_dir / "meta.json"
+    missing = [f for f in INDEX_FILES + ("meta.json",) if not (index_dir / f).exists()]
+    if missing:
+        return [f"missing file(s): {', '.join(missing)}"], {}
+    meta = json.loads(meta_path.read_text())
+    problems = []
+    if expected_spec is not None and meta.get("spec") != expected_spec:
+        problems.append("built with a different encoder/config/clause bank")
+    files = meta.get("files")
+    if not files:
+        return problems + ["meta.json has no per-file hashes (older index format)"], meta
+    for f in INDEX_FILES:
+        rec = files.get(f, {})
+        if (index_dir / f).stat().st_size != rec.get("bytes"):
+            problems.append(f"{f}: size differs from meta.json")
+        elif sha256_file(index_dir / f) != rec.get("sha256"):
+            problems.append(f"{f}: SHA-256 differs from meta.json")
+    if problems:
+        return problems, meta
+    emb = np.load(index_dir / "embeddings.npy", mmap_mode="r")
+    labels = np.load(index_dir / "labels.npy", mmap_mode="r")
+    n_texts = len(json.loads((index_dir / "texts.json").read_text()))
+    n = meta.get("n_clauses")
+    if emb.ndim != 2 or emb.shape[1] != meta.get("dim"):
+        problems.append(f"embeddings shape {emb.shape} != (n, {meta.get('dim')})")
+    if not (emb.shape[0] == len(labels) == n_texts == n):
+        problems.append(f"length mismatch: embeddings {emb.shape[0]}, labels {len(labels)}, texts {n_texts}, "
+                        f"meta {n}")
+    return problems, meta
+
+
 class ClauseIndex:
     def __init__(self, texts: list[str], labels: np.ndarray, emb: np.ndarray):
         self.texts, self.labels, self.emb = texts, labels, emb
@@ -146,7 +204,8 @@ class ClauseIndex:
 
     # ---------------------------------------------------------- build ----
     @classmethod
-    def build(cls) -> "ClauseIndex":
+    def build(cls, index_dir: Path = None) -> "ClauseIndex":
+        index_dir = index_dir or INDEX_DIR
         X, y = split_arrays("train")
         seen, keep = set(), []
         for i, t in enumerate(X):
@@ -158,38 +217,29 @@ class ClauseIndex:
         t0 = time.time()
         emb = encoder().encode(texts, batch_size=64, normalize_embeddings=True,
                                show_progress_bar=True, convert_to_numpy=True).astype(np.float32)
-        INDEX_DIR.mkdir(parents=True, exist_ok=True)
-        np.save(INDEX_DIR / "embeddings.npy", emb)
-        np.save(INDEX_DIR / "labels.npy", labels)
-        (INDEX_DIR / "texts.json").write_text(json.dumps(texts))
-        save_json({"spec": index_spec(), "built_with": encoder_context(),
-                   "n_clauses": len(texts), "dim": int(emb.shape[1]),
-                   "embeddings_sha256": sha256_file(INDEX_DIR / "embeddings.npy"),
-                   "encode_seconds": time.time() - t0}, INDEX_DIR / "meta.json")
+        write_index_files(index_dir, texts, labels, emb, {
+            "spec": index_spec(), "built_with": encoder_context(), "encode_seconds": time.time() - t0})
         return cls(texts, labels, emb)
 
     @classmethod
-    def load(cls, verify_files: bool = True) -> "ClauseIndex":
-        meta_path = INDEX_DIR / "meta.json"
-        if not (INDEX_DIR / "embeddings.npy").exists() or not meta_path.exists():
-            return cls.build()
-        meta = json.loads(meta_path.read_text())
-        if meta.get("spec") != index_spec():
-            print("[index] stored index was built with a different encoder/config/bank; rebuilding",
-                  file=sys.stderr)
-            return cls.build()
-        if verify_files and sha256_file(INDEX_DIR / "embeddings.npy") != meta.get("embeddings_sha256"):
-            print("[index] embeddings file does not match its recorded fingerprint; rebuilding",
-                  file=sys.stderr)
-            return cls.build()
+    def load(cls, index_dir: Path = None, rebuild: bool = True) -> "ClauseIndex":
+        """Load the index after checking every file against meta.json; rebuild if anything is off."""
+        index_dir = index_dir or INDEX_DIR
+        problems, meta = validate_index_files(index_dir, index_spec() if rebuild else None)
+        if problems:
+            msg = "[index] " + "; ".join(problems)
+            if not rebuild:
+                raise IndexIntegrityError(msg)
+            print(msg + " -> rebuilding", file=sys.stderr)
+            return cls.build(index_dir)
         built, now = meta.get("built_with"), encoder_context()
         if built is None:
             print("[index] build context not recorded", file=sys.stderr)
         elif any(built.get(k) != now[k] for k in now):
             print(f"[index] bank embeddings built with {built}; queries now encoded with {now} "
                   "(reused by policy; scores may differ slightly)", file=sys.stderr)
-        return cls(json.loads((INDEX_DIR / "texts.json").read_text()),
-                   np.load(INDEX_DIR / "labels.npy"), np.load(INDEX_DIR / "embeddings.npy"))
+        return cls(json.loads((index_dir / "texts.json").read_text()),
+                   np.load(index_dir / "labels.npy"), np.load(index_dir / "embeddings.npy"))
 
     @cached_property
     def bm25(self) -> SparseBM25:

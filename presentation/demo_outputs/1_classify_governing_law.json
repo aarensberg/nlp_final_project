@@ -1,0 +1,25 @@
+{
+  "clause": "This Agreement shall be governed by and construed in accordance with the laws of the State of New York, without regard to its conflict of laws principles.",
+  "variant": "ensemble",
+  "label": "Governing Laws",
+  "confidence": 0.9740043081659477,
+  "abstain": false,
+  "threshold": 0.708863824720781,
+  "threshold_note": null,
+  "top": [
+    [
+      "Governing Laws",
+      0.9740043081659477
+    ],
+    [
+      "Applicable Laws",
+      0.023354690564362943
+    ],
+    [
+      "Miscellaneous",
+      0.000344168531653822
+    ]
+  ],
+  "note": "Confidence = calibrated score that the clause TYPE is correct. It is not a probability that the clause is legally valid, enforceable or risk-free."
+}
+[12 s]

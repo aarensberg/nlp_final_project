@@ -6,7 +6,7 @@
     "tfidf": "TF-IDF + logistic regression"
   },
   "parameters": "fitted on validation, see reports/inference_config.json",
-  "macro_f1_definition": "mean over the fixed universe of 100 labels; F1_c = 2TP/(n_true+n_pred); F1_c = 1 when label c has neither true nor predicted examples",
+  "macro_f1_definition": "primary: mean over the fixed universe of labels 0..99; F1_c = 2TP/(n_true+n_pred); F1_c = 0 when label c has neither true nor predicted examples (= sklearn labels=range(100), average='macro', zero_division=0)",
   "bootstrap": "1000 resamples of test CLAUSES (no contract id available, so intervals ignore within-contract correlation and are likely somewhat too narrow)",
   "test_n": 10000,
   "test_n_without_train_duplicates": 9718,
@@ -26,8 +26,8 @@
           0.8906
         ],
         "macro_f1_95ci": [
-          0.815661154871635,
-          0.8376397539097291
+          0.8117314995532641,
+          0.836802016465268
         ]
       },
       "validation": {
@@ -38,6 +38,26 @@
         "weighted_f1": 0.8842296314751215,
         "n_labels_in_universe": 100,
         "n_labels_present_in_truth": 99
+      },
+      "sensitivity_macro_f1_absent_both_counts_one": {
+        "test": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.8284264197285587,
+          "macro_f1_absent_one_95ci": [
+            0.815661154871635,
+            0.8376397539097291
+          ],
+          "n_labels_absent_from_truth_and_predictions": 0
+        },
+        "validation": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.8290460462469723,
+          "macro_f1_absent_one_95ci": [
+            0.8157790738127803,
+            0.8465210659493718
+          ],
+          "n_labels_absent_from_truth_and_predictions": 0
+        }
       },
       "test_without_train_duplicates": {
         "n": 9718,
@@ -365,18 +385,38 @@
           0.8702099999999999
         ],
         "macro_f1_95ci": [
-          0.7519563296151334,
-          0.7763138909210682
+          0.7518001133405193,
+          0.770312935548664
         ]
       },
       "validation": {
         "n": 10000,
         "accuracy": 0.8637,
         "micro_f1": 0.8637,
-        "macro_f1": 0.778000360167941,
+        "macro_f1": 0.768000360167941,
         "weighted_f1": 0.8542183755917314,
         "n_labels_in_universe": 100,
         "n_labels_present_in_truth": 99
+      },
+      "sensitivity_macro_f1_absent_both_counts_one": {
+        "test": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.7627145791964226,
+          "macro_f1_absent_one_95ci": [
+            0.7519563296151334,
+            0.7763138909210682
+          ],
+          "n_labels_absent_from_truth_and_predictions": 0
+        },
+        "validation": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.778000360167941,
+          "macro_f1_absent_one_95ci": [
+            0.7683990443558135,
+            0.7877164679870997
+          ],
+          "n_labels_absent_from_truth_and_predictions": 1
+        }
       },
       "test_without_train_duplicates": {
         "n": 9718,
@@ -704,8 +744,8 @@
           0.8837
         ],
         "macro_f1_95ci": [
-          0.809267999763109,
-          0.8311819347594778
+          0.8052260630573989,
+          0.8299712201044335
         ]
       },
       "validation": {
@@ -716,6 +756,26 @@
         "weighted_f1": 0.8767967919771598,
         "n_labels_in_universe": 100,
         "n_labels_present_in_truth": 99
+      },
+      "sensitivity_macro_f1_absent_both_counts_one": {
+        "test": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.8219376759941999,
+          "macro_f1_absent_one_95ci": [
+            0.809267999763109,
+            0.8311819347594778
+          ],
+          "n_labels_absent_from_truth_and_predictions": 0
+        },
+        "validation": {
+          "definition": "sensitivity only: same, but F1_c = 1 when label c has neither true nor predicted examples",
+          "macro_f1_absent_one": 0.8188420577829894,
+          "macro_f1_absent_one_95ci": [
+            0.8056626541531438,
+            0.8365024649182597
+          ],
+          "n_labels_absent_from_truth_and_predictions": 0
+        }
       },
       "test_without_train_duplicates": {
         "n": 9718,
@@ -1038,8 +1098,8 @@
       ],
       "delta_macro_f1_points": 0.6488743734358815,
       "delta_macro_f1_95ci_points": [
-        0.3126349774525497,
-        1.0010994003240266
+        0.31263497745254915,
+        1.001099400324005
       ],
       "mcnemar": {
         "ensemble_right_tfidf_wrong": 106,

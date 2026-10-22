@@ -1,0 +1,880 @@
+{
+  "schema": 1,
+  "start_commit": "1c2b565696b57410cb61847597e37d2b8b6d5281",
+  "head_commit": "1c2b565696b57410cb61847597e37d2b8b6d5281",
+  "working_tree": {
+    "dirty": true,
+    "changed_paths": [
+      "README.md",
+      "presentation/",
+      "pyproject.toml",
+      "reports/archive/2026-10-22_before_final_release/",
+      "reports/eval_metrics.json",
+      "reports/final_validation.json",
+      "reports/final_validation.md",
+      "reports/inference_config.json",
+      "reports/per_class_test.csv",
+      "reports/run_manifest.json",
+      "reports/training_provenance.md",
+      "reports/validation_logs/",
+      "scripts/",
+      "src/nlp_final_project/__init__.py",
+      "src/nlp_final_project/evaluate.py",
+      "src/nlp_final_project/inference.py",
+      "src/nlp_final_project/manifest.py",
+      "src/nlp_final_project/metrics.py",
+      "src/nlp_final_project/retrieval.py",
+      "src/nlp_final_project/train.py",
+      "tests/test_artifacts.py",
+      "tests/test_cli.py",
+      "tests/test_integrity.py",
+      "tests/test_units.py"
+    ]
+  },
+  "tests": {
+    "initial_on_1c2b565": {
+      "no_artifacts": {
+        "passed": 58,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 0,
+        "error": 0
+      },
+      "artifacts_fast": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 3,
+        "error": 0
+      },
+      "artifacts_slow": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 8,
+        "error": 0
+      }
+    },
+    "final": {
+      "no_artifacts": {
+        "passed": 80,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 0,
+        "error": 0
+      },
+      "artifacts_fast": {
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 3,
+        "error": 0
+      },
+      "artifacts_slow": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 9,
+        "error": 0
+      },
+      "full_suite_last": {
+        "passed": 92,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 0,
+        "error": 0
+      },
+      "clean_rebuild_without_artifacts": {
+        "passed": 80,
+        "failed": 0,
+        "skipped": 12,
+        "deselected": 0,
+        "error": 0
+      },
+      "clean_rebuild_with_linked_artifacts": {
+        "passed": 92,
+        "failed": 0,
+        "skipped": 0,
+        "deselected": 0,
+        "error": 0
+      }
+    }
+  },
+  "cross_checks": "15/15 checks passed",
+  "commands": [
+    {
+      "name": "tests: no artifacts (fast)",
+      "command": "uv run pytest tests/test_units.py tests/test_cli.py tests/test_resume.py tests/test_integrity.py -q -rs",
+      "started_at": "2026-10-22T18:04:52+0200",
+      "ended_at": "2026-10-22T18:05:52+0200",
+      "seconds": 60,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_no_artifacts.txt",
+      "summary": "80 passed in 57.11s"
+    },
+    {
+      "name": "evaluate",
+      "command": "caffeinate -i uv run nlp-final-project evaluate",
+      "started_at": "2026-10-22T18:05:52+0200",
+      "ended_at": "2026-10-22T18:06:08+0200",
+      "seconds": 16,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_evaluate.txt",
+      "summary": ""
+    },
+    {
+      "name": "index (rebuild + evaluation)",
+      "command": "caffeinate -i uv run nlp-final-project index",
+      "started_at": "2026-10-22T18:06:13+0200",
+      "ended_at": "2026-10-22T18:11:11+0200",
+      "seconds": 298,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_index.txt",
+      "summary": ""
+    },
+    {
+      "name": "audit",
+      "command": "caffeinate -i uv run nlp-final-project audit",
+      "started_at": "2026-10-22T18:11:23+0200",
+      "ended_at": "2026-10-22T18:16:23+0200",
+      "seconds": 300,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_audit.txt",
+      "summary": ""
+    },
+    {
+      "name": "tests: with artifacts, not slow",
+      "command": "uv run pytest tests/test_artifacts.py -m not slow -q -rs",
+      "started_at": "2026-10-22T18:16:33+0200",
+      "ended_at": "2026-10-22T18:16:45+0200",
+      "seconds": 12,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_artifacts_fast.txt",
+      "summary": "9 passed, 3 deselected in 9.14s"
+    },
+    {
+      "name": "tests: with artifacts, slow",
+      "command": "uv run pytest tests/test_artifacts.py -m slow -q -rs",
+      "started_at": "2026-10-22T18:16:45+0200",
+      "ended_at": "2026-10-22T18:17:28+0200",
+      "seconds": 43,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_artifacts_slow.txt",
+      "summary": "3 passed, 9 deselected in 39.89s"
+    },
+    {
+      "name": "tests: full suite",
+      "command": "uv run pytest -q -rs",
+      "started_at": "2026-10-22T18:17:28+0200",
+      "ended_at": "2026-10-22T18:19:03+0200",
+      "seconds": 95,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_full.txt",
+      "summary": "92 passed in 92.41s (0:01:32)"
+    },
+    {
+      "name": "clean rebuild: uv sync --frozen (fresh venv)",
+      "command": "env -C <scratch>/clean_rebuild uv sync --frozen",
+      "started_at": "2026-10-22T18:21:02+0200",
+      "ended_at": "2026-10-22T18:21:03+0200",
+      "seconds": 1,
+      "exit_code": 0,
+      "log": "reports/validation_logs/clean_rebuild_sync.txt",
+      "summary": ""
+    },
+    {
+      "name": "clean rebuild: tests without artifacts",
+      "command": "env -C <scratch>/clean_rebuild uv run --frozen pytest -q -rs",
+      "started_at": "2026-10-22T18:21:03+0200",
+      "ended_at": "2026-10-22T18:22:58+0200",
+      "seconds": 115,
+      "exit_code": 0,
+      "log": "reports/validation_logs/clean_rebuild_tests_no_artifacts.txt",
+      "summary": "80 passed, 12 skipped in 106.09s (0:01:46)"
+    },
+    {
+      "name": "clean rebuild: tests with linked artifacts",
+      "command": "env -C <scratch>/clean_rebuild uv run --frozen pytest -q -rs",
+      "started_at": "2026-10-22T18:23:13+0200",
+      "ended_at": "2026-10-22T18:24:47+0200",
+      "seconds": 94,
+      "exit_code": 0,
+      "log": "reports/validation_logs/clean_rebuild_tests_with_artifacts.txt",
+      "summary": "92 passed in 90.63s (0:01:30)"
+    },
+    {
+      "name": "tests: final full suite (after docs)",
+      "command": "uv run pytest -q -rs",
+      "started_at": "2026-10-22T18:29:51+0200",
+      "ended_at": "2026-10-22T18:31:21+0200",
+      "seconds": 90,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_full_after_docs.txt",
+      "summary": "92 passed in 87.98s (0:01:27)"
+    },
+    {
+      "name": "key numbers generation",
+      "command": "uv run python scripts/key_numbers.py",
+      "started_at": "2026-10-22T18:31:21+0200",
+      "ended_at": "2026-10-22T18:31:23+0200",
+      "seconds": 2,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_key_numbers.txt",
+      "summary": ""
+    },
+    {
+      "name": "manifest",
+      "command": "uv run nlp-final-project manifest",
+      "started_at": "2026-10-22T18:31:23+0200",
+      "ended_at": "2026-10-22T18:31:31+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_manifest.txt",
+      "summary": ""
+    },
+    {
+      "name": "cross checks (with manifest)",
+      "command": "uv run python scripts/cross_checks.py --manifest",
+      "started_at": "2026-10-22T18:31:31+0200",
+      "ended_at": "2026-10-22T18:31:39+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_cross_checks.txt",
+      "summary": "15/15 checks passed"
+    },
+    {
+      "name": "evaluate (CSV with Unix line endings)",
+      "command": "caffeinate -i uv run nlp-final-project evaluate",
+      "started_at": "2026-10-22T18:32:47+0200",
+      "ended_at": "2026-10-22T18:33:01+0200",
+      "seconds": 14,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_evaluate_2.txt",
+      "summary": ""
+    },
+    {
+      "name": "tests: final full suite",
+      "command": "uv run pytest -q -rs",
+      "started_at": "2026-10-22T18:33:01+0200",
+      "ended_at": "2026-10-22T18:34:32+0200",
+      "seconds": 91,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_full_last.txt",
+      "summary": "92 passed in 87.93s (0:01:27)"
+    },
+    {
+      "name": "key numbers generation (final)",
+      "command": "uv run python scripts/key_numbers.py",
+      "started_at": "2026-10-22T18:34:32+0200",
+      "ended_at": "2026-10-22T18:34:33+0200",
+      "seconds": 1,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_key_numbers_2.txt",
+      "summary": ""
+    },
+    {
+      "name": "manifest (final)",
+      "command": "uv run nlp-final-project manifest",
+      "started_at": "2026-10-22T18:34:35+0200",
+      "ended_at": "2026-10-22T18:34:43+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_manifest_2.txt",
+      "summary": ""
+    },
+    {
+      "name": "cross checks (final, with manifest)",
+      "command": "uv run python scripts/cross_checks.py --manifest",
+      "started_at": "2026-10-22T18:34:43+0200",
+      "ended_at": "2026-10-22T18:34:52+0200",
+      "seconds": 9,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_cross_checks_2.txt",
+      "summary": "15/15 checks passed"
+    },
+    {
+      "name": "tests: manifest schema after fix",
+      "command": "uv run pytest tests/test_cli.py -q -k manifest",
+      "started_at": "2026-10-22T18:35:47+0200",
+      "ended_at": "2026-10-22T18:35:58+0200",
+      "seconds": 11,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_manifest_fix.txt",
+      "summary": "2 passed, 18 deselected in 9.34s"
+    },
+    {
+      "name": "manifest (final, after status fix)",
+      "command": "uv run nlp-final-project manifest",
+      "started_at": "2026-10-22T18:35:58+0200",
+      "ended_at": "2026-10-22T18:36:06+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_manifest_3.txt",
+      "summary": ""
+    },
+    {
+      "name": "cross checks (final, after status fix)",
+      "command": "uv run python scripts/cross_checks.py --manifest",
+      "started_at": "2026-10-22T18:36:06+0200",
+      "ended_at": "2026-10-22T18:36:14+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_cross_checks_3.txt",
+      "summary": "15/15 checks passed"
+    },
+    {
+      "name": "tests: final full suite (closing)",
+      "command": "uv run pytest -q -rs",
+      "started_at": "2026-10-22T18:36:28+0200",
+      "ended_at": "2026-10-22T18:37:58+0200",
+      "seconds": 90,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_full_last.txt",
+      "summary": "92 passed in 87.82s (0:01:27)"
+    },
+    {
+      "name": "manifest (closing)",
+      "command": "uv run nlp-final-project manifest",
+      "started_at": "2026-10-22T18:38:00+0200",
+      "ended_at": "2026-10-22T18:38:08+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_manifest_closing.txt",
+      "summary": ""
+    },
+    {
+      "name": "cross checks (closing, with manifest)",
+      "command": "uv run python scripts/cross_checks.py --manifest",
+      "started_at": "2026-10-22T18:38:08+0200",
+      "ended_at": "2026-10-22T18:38:17+0200",
+      "seconds": 9,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_cross_checks_3.txt",
+      "summary": "15/15 checks passed"
+    },
+    {
+      "name": "tests: manifest + cli after exclusion fix",
+      "command": "uv run pytest tests/test_cli.py -q",
+      "started_at": "2026-10-22T18:39:55+0200",
+      "ended_at": "2026-10-22T18:40:50+0200",
+      "seconds": 55,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_manifest_fix_2.txt",
+      "summary": "20 passed in 52.13s"
+    },
+    {
+      "name": "manifest (closing, final_validation excluded)",
+      "command": "uv run nlp-final-project manifest",
+      "started_at": "2026-10-22T18:40:50+0200",
+      "ended_at": "2026-10-22T18:40:58+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_manifest_closing.txt",
+      "summary": ""
+    },
+    {
+      "name": "cross checks (closing)",
+      "command": "uv run python scripts/cross_checks.py --manifest",
+      "started_at": "2026-10-22T18:40:59+0200",
+      "ended_at": "2026-10-22T18:41:07+0200",
+      "seconds": 8,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_cross_checks_3.txt",
+      "summary": "15/15 checks passed"
+    },
+    {
+      "name": "tests: final full suite (closing, last)",
+      "command": "uv run pytest -q -rs",
+      "started_at": "2026-10-22T18:41:27+0200",
+      "ended_at": "2026-10-22T18:43:02+0200",
+      "seconds": 95,
+      "exit_code": 0,
+      "log": "reports/validation_logs/final_tests_full_last.txt",
+      "summary": "92 passed in 93.02s (0:01:33)"
+    }
+  ],
+  "before_after": [
+    {
+      "metric": "ensemble.test.micro_f1",
+      "before_1c2b565": 0.8843,
+      "after": 0.8843,
+      "source": "eval_metrics.json:variants/ensemble/test/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.test.macro_f1",
+      "before_1c2b565": 0.8284264197285587,
+      "after": 0.8284264197285587,
+      "source": "eval_metrics.json:variants/ensemble/test/macro_f1",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.test.micro_f1_95ci",
+      "before_1c2b565": [
+        0.8777975,
+        0.8906
+      ],
+      "after": [
+        0.8777975,
+        0.8906
+      ],
+      "source": "eval_metrics.json:variants/ensemble/test/micro_f1_95ci",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.test.macro_f1_95ci",
+      "before_1c2b565": [
+        0.815661154871635,
+        0.8376397539097291
+      ],
+      "after": [
+        0.8117314995532641,
+        0.836802016465268
+      ],
+      "source": "eval_metrics.json:variants/ensemble/test/macro_f1_95ci",
+      "changed": true
+    },
+    {
+      "metric": "ensemble.validation.micro_f1",
+      "before_1c2b565": 0.8878,
+      "after": 0.8878,
+      "source": "eval_metrics.json:variants/ensemble/validation/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.validation.macro_f1",
+      "before_1c2b565": 0.8290460462469723,
+      "after": 0.8290460462469723,
+      "source": "eval_metrics.json:variants/ensemble/validation/macro_f1",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.abstention.test_coverage",
+      "before_1c2b565": 0.842,
+      "after": 0.842,
+      "source": "eval_metrics.json:variants/ensemble/abstention/test_coverage",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.abstention.test_correct_rate_among_handled",
+      "before_1c2b565": 0.9451306413301662,
+      "after": 0.9451306413301662,
+      "source": "eval_metrics.json:variants/ensemble/abstention/test_correct_rate_among_handled",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.threshold",
+      "before_1c2b565": 0.708863824720781,
+      "after": 0.708863824720781,
+      "source": "inference_config.json:abstention/thresholds/ensemble",
+      "changed": false
+    },
+    {
+      "metric": "bert.test.micro_f1",
+      "before_1c2b565": 0.8635,
+      "after": 0.8635,
+      "source": "eval_metrics.json:variants/bert/test/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "bert.test.macro_f1",
+      "before_1c2b565": 0.7627145791964226,
+      "after": 0.7627145791964226,
+      "source": "eval_metrics.json:variants/bert/test/macro_f1",
+      "changed": false
+    },
+    {
+      "metric": "bert.test.micro_f1_95ci",
+      "before_1c2b565": [
+        0.8565975,
+        0.8702099999999999
+      ],
+      "after": [
+        0.8565975,
+        0.8702099999999999
+      ],
+      "source": "eval_metrics.json:variants/bert/test/micro_f1_95ci",
+      "changed": false
+    },
+    {
+      "metric": "bert.test.macro_f1_95ci",
+      "before_1c2b565": [
+        0.7519563296151334,
+        0.7763138909210682
+      ],
+      "after": [
+        0.7518001133405193,
+        0.770312935548664
+      ],
+      "source": "eval_metrics.json:variants/bert/test/macro_f1_95ci",
+      "changed": true
+    },
+    {
+      "metric": "bert.validation.micro_f1",
+      "before_1c2b565": 0.8637,
+      "after": 0.8637,
+      "source": "eval_metrics.json:variants/bert/validation/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "bert.validation.macro_f1",
+      "before_1c2b565": 0.778000360167941,
+      "after": 0.768000360167941,
+      "source": "eval_metrics.json:variants/bert/validation/macro_f1",
+      "changed": true
+    },
+    {
+      "metric": "bert.abstention.test_coverage",
+      "before_1c2b565": 0.7637,
+      "after": 0.7637,
+      "source": "eval_metrics.json:variants/bert/abstention/test_coverage",
+      "changed": false
+    },
+    {
+      "metric": "bert.abstention.test_correct_rate_among_handled",
+      "before_1c2b565": 0.9482781196805028,
+      "after": 0.9482781196805028,
+      "source": "eval_metrics.json:variants/bert/abstention/test_correct_rate_among_handled",
+      "changed": false
+    },
+    {
+      "metric": "bert.threshold",
+      "before_1c2b565": 0.8508285284042358,
+      "after": 0.8508285284042358,
+      "source": "inference_config.json:abstention/thresholds/bert",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.test.micro_f1",
+      "before_1c2b565": 0.877,
+      "after": 0.877,
+      "source": "eval_metrics.json:variants/tfidf/test/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.test.macro_f1",
+      "before_1c2b565": 0.8219376759941999,
+      "after": 0.8219376759941999,
+      "source": "eval_metrics.json:variants/tfidf/test/macro_f1",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.test.micro_f1_95ci",
+      "before_1c2b565": [
+        0.8702,
+        0.8837
+      ],
+      "after": [
+        0.8702,
+        0.8837
+      ],
+      "source": "eval_metrics.json:variants/tfidf/test/micro_f1_95ci",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.test.macro_f1_95ci",
+      "before_1c2b565": [
+        0.809267999763109,
+        0.8311819347594778
+      ],
+      "after": [
+        0.8052260630573989,
+        0.8299712201044335
+      ],
+      "source": "eval_metrics.json:variants/tfidf/test/macro_f1_95ci",
+      "changed": true
+    },
+    {
+      "metric": "tfidf.validation.micro_f1",
+      "before_1c2b565": 0.8797,
+      "after": 0.8797,
+      "source": "eval_metrics.json:variants/tfidf/validation/micro_f1",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.validation.macro_f1",
+      "before_1c2b565": 0.8188420577829894,
+      "after": 0.8188420577829894,
+      "source": "eval_metrics.json:variants/tfidf/validation/macro_f1",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.abstention.test_coverage",
+      "before_1c2b565": 0.8321,
+      "after": 0.8321,
+      "source": "eval_metrics.json:variants/tfidf/abstention/test_coverage",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.abstention.test_correct_rate_among_handled",
+      "before_1c2b565": 0.9459199615430838,
+      "after": 0.9459199615430838,
+      "source": "eval_metrics.json:variants/tfidf/abstention/test_correct_rate_among_handled",
+      "changed": false
+    },
+    {
+      "metric": "tfidf.threshold",
+      "before_1c2b565": 0.7562073504192992,
+      "after": 0.7562073504192992,
+      "source": "inference_config.json:abstention/thresholds/tfidf",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_tfidf.delta_macro_f1_points",
+      "before_1c2b565": 0.6488743734358815,
+      "after": 0.6488743734358815,
+      "source": "eval_metrics.json:comparisons/ensemble_vs_tfidf/delta_macro_f1_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_tfidf.delta_macro_f1_95ci_points",
+      "before_1c2b565": [
+        0.3126349774525497,
+        1.0010994003240266
+      ],
+      "after": [
+        0.31263497745254915,
+        1.001099400324005
+      ],
+      "source": "eval_metrics.json:comparisons/ensemble_vs_tfidf/delta_macro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_tfidf.delta_micro_f1_95ci_points",
+      "before_1c2b565": [
+        0.5099999999999993,
+        0.9800000000000031
+      ],
+      "after": [
+        0.5099999999999993,
+        0.9800000000000031
+      ],
+      "source": "eval_metrics.json:comparisons/ensemble_vs_tfidf/delta_micro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_bert.delta_macro_f1_points",
+      "before_1c2b565": 6.571184053213608,
+      "after": 6.571184053213608,
+      "source": "eval_metrics.json:comparisons/ensemble_vs_bert/delta_macro_f1_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_bert.delta_macro_f1_95ci_points",
+      "before_1c2b565": [
+        5.204804332271585,
+        7.512305277537075
+      ],
+      "after": [
+        5.204804332271585,
+        7.512305277537075
+      ],
+      "source": "eval_metrics.json:comparisons/ensemble_vs_bert/delta_macro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble_vs_bert.delta_micro_f1_95ci_points",
+      "before_1c2b565": [
+        1.539749999999997,
+        2.5999999999999917
+      ],
+      "after": [
+        1.539749999999997,
+        2.5999999999999917
+      ],
+      "source": "eval_metrics.json:comparisons/ensemble_vs_bert/delta_micro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "bert_vs_tfidf.delta_macro_f1_points",
+      "before_1c2b565": -5.922309679777726,
+      "after": -5.922309679777726,
+      "source": "eval_metrics.json:comparisons/bert_vs_tfidf/delta_macro_f1_points",
+      "changed": false
+    },
+    {
+      "metric": "bert_vs_tfidf.delta_macro_f1_95ci_points",
+      "before_1c2b565": [
+        -6.880581950757625,
+        -4.498577003867093
+      ],
+      "after": [
+        -6.880581950757625,
+        -4.498577003867093
+      ],
+      "source": "eval_metrics.json:comparisons/bert_vs_tfidf/delta_macro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "bert_vs_tfidf.delta_micro_f1_95ci_points",
+      "before_1c2b565": [
+        -1.9304999999999986,
+        -0.770000000000004
+      ],
+      "after": [
+        -1.9304999999999986,
+        -0.770000000000004
+      ],
+      "source": "eval_metrics.json:comparisons/bert_vs_tfidf/delta_micro_f1_95ci_points",
+      "changed": false
+    },
+    {
+      "metric": "ensemble.weight_bert",
+      "before_1c2b565": 0.2,
+      "after": 0.2,
+      "source": "inference_config.json:ensemble/weight_bert",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.dense.p@1",
+      "before_1c2b565": 0.7655453618756372,
+      "after": 0.7655453618756372,
+      "source": "retrieval_metrics.json:clause_to_clause/dense/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.dense.p@10",
+      "before_1c2b565": 0.6480122324159022,
+      "after": 0.6480122324159022,
+      "source": "retrieval_metrics.json:clause_to_clause/dense/p@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.dense.mrr@10",
+      "before_1c2b565": 0.8136635762018025,
+      "after": 0.8136635762018025,
+      "source": "retrieval_metrics.json:clause_to_clause/dense/mrr@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.bm25.p@1",
+      "before_1c2b565": 0.7696228338430173,
+      "after": 0.7696228338430173,
+      "source": "retrieval_metrics.json:clause_to_clause/bm25/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.bm25.p@10",
+      "before_1c2b565": 0.6458715596330274,
+      "after": 0.6458715596330274,
+      "source": "retrieval_metrics.json:clause_to_clause/bm25/p@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.bm25.mrr@10",
+      "before_1c2b565": 0.81714763037393,
+      "after": 0.81714763037393,
+      "source": "retrieval_metrics.json:clause_to_clause/bm25/mrr@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.hybrid.p@1",
+      "before_1c2b565": 0.7737003058103975,
+      "after": 0.7737003058103975,
+      "source": "retrieval_metrics.json:clause_to_clause/hybrid/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.hybrid.p@10",
+      "before_1c2b565": 0.663506625891947,
+      "after": 0.663506625891947,
+      "source": "retrieval_metrics.json:clause_to_clause/hybrid/p@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.clause_to_clause.hybrid.mrr@10",
+      "before_1c2b565": 0.8235558953448862,
+      "after": 0.8235558953448862,
+      "source": "retrieval_metrics.json:clause_to_clause/hybrid/mrr@10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.dense.p@1",
+      "before_1c2b565": 0.85,
+      "after": 0.85,
+      "source": "retrieval_metrics.json:questions/0/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.dense.precision_at_10",
+      "before_1c2b565": 0.875,
+      "after": 0.875,
+      "source": "retrieval_metrics.json:questions/0/precision_at_10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.bm25.p@1",
+      "before_1c2b565": 0.825,
+      "after": 0.825,
+      "source": "retrieval_metrics.json:questions/1/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.bm25.precision_at_10",
+      "before_1c2b565": 0.8299999999999998,
+      "after": 0.8299999999999998,
+      "source": "retrieval_metrics.json:questions/1/precision_at_10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.hybrid.p@1",
+      "before_1c2b565": 0.925,
+      "after": 0.925,
+      "source": "retrieval_metrics.json:questions/2/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.hybrid.precision_at_10",
+      "before_1c2b565": 0.8925000000000001,
+      "after": 0.8925000000000001,
+      "source": "retrieval_metrics.json:questions/2/precision_at_10",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.hybrid + period filter.p@1",
+      "before_1c2b565": 0.95,
+      "after": 0.95,
+      "source": "retrieval_metrics.json:questions/3/p@1",
+      "changed": false
+    },
+    {
+      "metric": "retrieval.questions_seen.hybrid + period filter.precision_at_10",
+      "before_1c2b565": 0.89,
+      "after": 0.89,
+      "source": "retrieval_metrics.json:questions/3/precision_at_10",
+      "changed": false
+    },
+    {
+      "metric": "audit.slices",
+      "before_1c2b565": "see archive",
+      "after": "identical",
+      "source": "audit.json:slices",
+      "changed": false
+    },
+    {
+      "metric": "audit.counterfactuals",
+      "before_1c2b565": "see archive",
+      "after": "identical",
+      "source": "audit.json:counterfactuals",
+      "changed": false
+    },
+    {
+      "metric": "audit.out_of_scope",
+      "before_1c2b565": "see archive",
+      "after": "identical",
+      "source": "audit.json:out_of_scope",
+      "changed": false
+    },
+    {
+      "metric": "audit.retrieval",
+      "before_1c2b565": "see archive",
+      "after": "identical",
+      "source": "audit.json:retrieval",
+      "changed": false
+    }
+  ],
+  "manifest_sha256": "fc90a14c1e5c6a647d15343410907a64575e34416e232631a672ded206466a5d",
+  "predictions_changed": false,
+  "retraining": false,
+  "verdict": "ready for submission (with the documented limitations)"
+}

@@ -1,0 +1,18 @@
+(period filter: clauses mentioning any of [30] day(s); 824 eligible. Mentioning a duration does not mean it is the requested notice period: the role of the duration is not checked)
+
+[1] Terminations  (score 0.0320)
+    Following the Term, either party may, in its discretion and at its option terminate this Agreement at any time upon thirty (30) days’ written notice to the other party, provided, however, the provisions providing compensation to Consultant, as well as Section 4, 6, 7, 8, and 16, shall survive such termination.
+
+[2] Terminations  (score 0.0318)
+    The Term of this Agreement may be terminated by either party upon thirty (30) days’ prior written notice.
+
+[3] Terminations  (score 0.0308)
+    Either party may terminate the employment relationship for any reason at any time upon giving the other party thirty (30) days prior written notice. The Company may, in its discretion, relieve the Participant of some or all of his/her duties during all or a part of such notice period. Subject to the forgoing notice obligation, the Participant’s employment with the Company shall remain at will.
+
+[4] Terminations  (score 0.0307)
+    This Agreement may be terminated in accordance with the following provisions: (i) Either party may terminate this Agreement if the other party materially breaches any of its obligations or provisions of this Agreement, provided, however, that the breaching party shall be given not less than thirty (30) days’ prior written notice of such material breach and the opportunity to cure the breach during
+
+[5] Terminations  (score 0.0302)
+    Either the Executive or the Company may terminate the Executive's employment under this Agreement for any reason upon not less than thirty (30) days prior written notice.
+
+[16 s]
