@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soutenance NLP · LEDGAR</title>
+<style>
+:root{
+  --bg:#0f172a; --panel:#1e293b; --edge:#475569; --fg:#e2e8f0; --muted:#94a3b8;
+  --blue:#60a5fa; --orange:#fb923c; --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  --alessandro:#a78bfa; --charles:#22d3ee; --louis:#f472b6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:var(--fg);font-family:"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;overflow:hidden}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}
+#stage{width:1600px;height:900px;position:relative;background:var(--bg);transform-origin:center center;overflow:hidden}
+.slide{position:absolute;inset:0;display:none;flex-direction:column}
+.slide.active{display:flex}
+/* barre du haut */
+.top{height:58px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 36px;border-bottom:1px solid #1e293b}
+.section{font-size:17px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.who{font-size:17px;font-weight:700;padding:5px 14px;border-radius:999px;border:2px solid currentColor}
+.who.A{color:var(--alessandro)} .who.C{color:var(--charles)} .who.L{color:var(--louis)}
+.who .arrow{color:var(--muted);font-weight:400;margin:0 6px}
+/* contenu */
+.body{flex:1;padding:34px 70px 30px;display:flex;flex-direction:column;min-height:0}
+h1{font-size:46px;font-weight:700;line-height:1.15;margin-bottom:26px}
+h2{font-size:28px;font-weight:700;margin-bottom:14px}
+p,li{font-size:25px;line-height:1.45}
+ul{list-style:none}
+ul li{padding-left:30px;position:relative;margin-bottom:10px}
+ul li::before{content:"";position:absolute;left:4px;top:15px;width:10px;height:10px;border-radius:2px;background:var(--edge)}
+.muted{color:var(--muted)} .blue{color:var(--blue)} .orange{color:var(--orange)} .green{color:var(--green)} .amber{color:var(--amber)} .red{color:var(--red)}
+.roomy li{font-size:27px;margin-bottom:16px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;flex:1;min-height:0}
+.card{background:var(--panel);border:2px solid var(--edge);border-radius:14px;padding:24px 28px}
+.card.b{border-color:var(--blue)} .card.g{border-color:var(--green)} .card.o{border-color:var(--orange)} .card.a{border-color:var(--amber)} .card.r{border-color:var(--red)}
+.big{font-size:64px;font-weight:700;line-height:1}
+.kpis{display:flex;gap:28px;margin:6px 0 18px}
+.kpi{flex:1;background:var(--panel);border-radius:14px;padding:20px 24px;border:2px solid var(--edge)}
+.kpi .lbl{font-size:19px;color:var(--muted);margin-top:8px}
+.note{font-size:19px;color:var(--muted);line-height:1.45}
+.caution{margin-top:auto;font-size:20px;color:var(--amber);border-left:4px solid var(--amber);padding:8px 16px;background:rgba(251,191,36,.07)}
+table{border-collapse:collapse;width:100%;font-size:22px;align-self:start}
+td,th{padding:9px 12px;border-bottom:1px solid #334155;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:.06em}
+/* vidéos */
+.vbody{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;cursor:pointer}
+.vbody video,.vbody img{width:1440px;height:810px;display:block;background:var(--bg);border:1px solid #334155;border-radius:12px}
+.replay{position:absolute;right:30px;bottom:44px;font-size:14px;color:var(--muted);opacity:.55}
+/* terminal */
+.term{background:#020617;border:1px solid #334155;border-radius:12px;padding:20px 26px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:20px;line-height:1.55;color:#cbd5e1;overflow:hidden}
+.term .cmd{color:var(--green)} .term .lab{color:var(--green);font-weight:700} .term .warn{color:var(--amber)}
+/* titre */
+.title-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 110px}
+.title-wrap .kicker{font-size:22px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:22px}
+.title-wrap h1{font-size:64px;margin-bottom:22px}
+.title-wrap .sub{font-size:28px;color:var(--muted);max-width:1200px;line-height:1.4}
+.team{display:flex;gap:18px;margin-top:56px}
+.team div{font-size:22px;font-weight:700;padding:10px 20px;border-radius:12px;border:2px solid currentColor}
+.badge{display:inline-block;margin-top:40px;font-size:20px;color:var(--amber);border:2px solid var(--amber);border-radius:999px;padding:6px 18px;width:max-content}
+/* annexes */
+.fig{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;background:#fafafa;border-radius:12px;padding:14px}
+.fig img{max-width:100%;max-height:100%;object-fit:contain}
+/* pied */
+.progress{position:absolute;left:0;bottom:0;height:5px;background:var(--blue);transition:width .25s}
+.pageno{position:absolute;right:36px;bottom:14px;font-size:15px;color:var(--muted)}
+.hint{position:absolute;left:36px;bottom:14px;font-size:14px;color:#64748b}
+/* notes */
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:rgba(2,6,23,.96);border-top:2px solid var(--edge);padding:16px 28px 22px;display:none;font-size:17px;line-height:1.5;z-index:10}
+#notes.open{display:block}
+#notes h3{font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+#notes .w{color:var(--amber)}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+<!-- 1 ─ Titre -->
+<section class="slide" data-who="A" data-section="Ouverture"
+ data-notes="Présenter le sujet et l'équipe ; annoncer la répartition. Dire « prototype de recherche » dès maintenant.">
+  <div class="title-wrap">
+    <div class="kicker">Deep Learning for Sequential Data &amp; NLP · Projet final</div>
+    <h1>Cœur NLP d'un assistant<br>de revue de contrats</h1>
+    <div class="sub">Classer les clauses, retrouver des précédents, et documenter où l'on peut — et ne peut pas — faire confiance au système. Données : LEDGAR (LexGLUE).</div>
+    <div class="badge">Prototype de recherche · clauses anglaises (SEC) · ne remplace pas un avocat</div>
+    <div class="team">
+      <div style="color:var(--alessandro)">Alessandro · problème, données, conclusion</div>
+      <div style="color:var(--charles)">Charles · classification</div>
+      <div style="color:var(--louis)">Louis · recherche, audit, reproductibilité</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 ─ Besoin métier -->
+<section class="slide" data-who="A" data-section="Problème" data-video="S02BusinessNeed"
+ data-notes="Trois besoins : classer (100 types), retrouver, prouver / signaler. Clients européens : pas de boîte noire. <span class='w'>⚠ Ne pas dire que le système « comprend » les contrats.</span>"></section>
+
+<!-- 3 ─ Pourquoi LEDGAR -->
+<section class="slide" data-who="A" data-section="Données · pourquoi LEDGAR" data-video="S03DataSplit"
+ data-notes="Seul jeu public annoté à cette échelle + benchmark LexGLUE. Découpage chronologique 60k / 10k / 10k. Règle : réglages sur la validation, test = mesure uniquement."></section>
+
+<!-- 4 ─ Limites LEDGAR -->
+<section class="slide" data-who="A" data-section="Données · limites" data-video="S04DataLimits"
+ data-notes="Déséquilibre ×138 → macro-F1. Anglais / droit US ; 253 clauses train hors États-Unis (proxy mots-clés). Types absents : RGPD, force majeure, non-concurrence, limitation de responsabilité. 282 doublons test/train. <span class='w'>⚠ « hors États-Unis », pas « européennes ».</span>"></section>
+
+<!-- 5 ─ Architecture -->
+<section class="slide" data-who="A" data-to="C" data-section="Architecture" data-video="S05Architecture"
+ data-notes="Deux chaînes. Classification : BERT + TF-IDF calibrés, poids 0,2 / 0,8, seuil 0,709 → type ou juriste. Recherche : filtre N jours → dense + BM25 → RRF. Trois variantes rapportées. Passage à Charles."></section>
+
+<!-- 6 ─ TF-IDF -->
+<section class="slide" data-who="C" data-section="Classification · baseline"
+ data-notes="Un baseline fort rend la comparaison crédible. LEDGAR : le type tient souvent à des mots-clés. <span class='w'>⚠ Comparaison LexGLUE indicative : même test, protocole différent.</span>">
+  <div class="body">
+    <h1>Baseline : TF-IDF + régression logistique</h1>
+    <div class="cols">
+      <div>
+        <div class="card g" style="margin-bottom:24px">
+          <h2 class="green">Ce que c'est</h2>
+          <ul>
+            <li>Vecteurs TF-IDF sur unigrammes et bigrammes</li>
+            <li>Régression logistique sur les 100 types</li>
+            <li>≈ 4 min d'entraînement sur CPU</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h2>Pourquoi il est difficile à battre</h2>
+          <p>Sur LEDGAR, le type d'une clause tient souvent à quelques mots-clés : <span class="green">« governing law »</span>, <span class="green">« counterparts »</span>, <span class="green">« severability »</span>. Un modèle lexical les capte très bien.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div class="kpis">
+          <div class="kpi"><div class="big green">87,70</div><div class="lbl">micro-F1 test [87,02 ; 88,37]</div></div>
+          <div class="kpi"><div class="big green">82,19</div><div class="lbl">macro-F1 test [80,52 ; 83,00]</div></div>
+        </div>
+        <p class="note" style="margin-top:10px">Référence publiée (LexGLUE, Chalkidis et al. 2022, tableau 3) : TF-IDF + SVM <b>87,0 / 81,4</b>.</p>
+        <div class="caution">Comparaison indicative : même test, mais autre protocole (SVM 1-3 grammes avec recherche de grille).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 ─ Legal-BERT -->
+<section class="slide" data-who="C" data-section="Classification · Legal-BERT"
+ data-notes="Legal-BERT plutôt que CamemBERT (données anglaises). Boucle PyTorch maison. Budget portable : 2 époques, 256 tokens, 146 min, un seul run sans reprise. <span class='w'>⚠ 74,0 → 77,6 = ancienne définition du macro-F1 (trace historique).</span>">
+  <div class="body">
+    <h1>Fine-tuning de Legal-BERT</h1>
+    <div class="cols" style="grid-template-columns:1.15fr 1fr">
+      <table>
+        <tr><th>Choix</th><th>Valeur</th><th>Raison</th></tr>
+        <tr><td>Modèle</td><td class="orange">legal-bert-base-uncased</td><td class="muted">anglais juridique ; CamemBERT est français</td></tr>
+        <tr><td>Longueur</td><td>256 tokens</td><td class="muted">88 % des clauses entières ; 512 saturait 16 Go</td></tr>
+        <tr><td>Budget</td><td>2 époques · 1 graine (42)</td><td class="muted">portable Apple M3, 146 min</td></tr>
+        <tr><td>Optim.</td><td>AdamW 3·10⁻⁵, warm-up 6 %, bf16</td><td class="muted">recette BERT standard</td></tr>
+        <tr><td>Boucle</td><td>PyTorch écrite à la main</td><td class="muted">lots par longueur, checkpoints reprenables</td></tr>
+      </table>
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <div class="card o">
+          <h2 class="orange">Validation pendant l'entraînement</h2>
+          <p>macro-F1 : <b>74,0</b> (époque 1) → <b>77,6</b> (époque 2)</p>
+          <p class="note">Il montait encore. Valeurs de la trace d'entraînement (définition de l'époque : labels présents seulement).</p>
+        </div>
+        <div class="card">
+          <h2>Provenance</h2>
+          <p class="note" style="font-size:21px">Un seul processus, étape 0 → 7 500, sans reprise (prouvé par le journal). Reprise testée sur CPU uniquement.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 ─ Résultats -->
+<section class="slide" data-who="C" data-section="Résultats" data-video="S08Results"
+ data-notes="Résultat inconfortable : BERT seul &lt; TF-IDF (86,35 vs 87,70 micro ; 76,27 vs 82,19 macro ; queue 61,9 vs 74,3). Deux HYPOTHÈSES : 2 époques ; troncature (−3,9 pt sur clauses &gt; 200 mots, −0,3 sur 31-80). Combinaison 88,43 / 82,84. <span class='w'>⚠ Jamais « BERT est sous-entraîné » comme un fait. IC bootstrap probablement un peu trop étroits.</span>"></section>
+
+<!-- 9 ─ Combinaison -->
+<section class="slide" data-who="C" data-section="Combinaison" data-video="S09Ensemble"
+ data-notes="Moyenne pondérée des probabilités calibrées, poids choisi sur la validation. Gain +0,73 micro [+0,51 ; +0,98], +0,65 macro. McNemar : 106 contre 33. Signal complémentaire, pas une révolution. <span class='w'>⚠ McNemar teste le taux d'erreur, pas le macro-F1.</span>"></section>
+
+<!-- 10 ─ Abstention -->
+<section class="slide" data-who="C" data-to="L" data-section="Calibration et abstention" data-video="S10Abstention"
+ data-notes="Températures sur la validation ; ECE 0,017. Seuil 0,709 = plus bas seuil atteignant 95 % sur la validation. Test : 84,2 % traitées, 94,5 % correctes ; ~1 clause sur 6 au juriste, c'est voulu. <span class='w'>⚠ 95 % = cible, pas garantie. Confiance = type, pas validité juridique.</span> Passage à Louis."></section>
+
+<!-- 11 ─ Recherche -->
+<section class="slide" data-who="L" data-section="Recherche" data-video="S11Retrieval"
+ data-notes="Banque 59 080 clauses. Dense (sens) + BM25 (mots exacts), fusion RRF 1/(60+rang). 981 requêtes : P@1 77,4 %, P@10 66,4 %. <span class='w'>⚠ Pertinence = même label. 40 questions déjà vues = non-régression (hybride P@1 92,5 %).</span>"></section>
+
+<!-- 12 ─ Exemple réussi -->
+<section class="slide" data-who="L" data-section="Recherche · exemple réussi"
+ data-notes="Formulation proche des clauses : 5/5 Terminations avec préavis de trente jours. Dire « sortie réelle enregistrée » si pas de démo live. Préparer : « regardez ce qui se passe si on reformule ».">
+  <div class="body">
+    <h1>Exemple réussi : formulation proche d'une clause</h1>
+    <div class="term">
+      <div class="cmd">$ nlp-final-project search "either party may terminate on thirty days written notice" -k 5</div>
+      <div class="warn" style="margin:8px 0 12px">(period filter: clauses mentioning any of [30] day(s); 824 eligible. Mentioning a duration does not mean it is the requested notice period: the role of the duration is not checked)</div>
+      <div><span class="lab">[1] Terminations</span>  … either party may … terminate this Agreement at any time upon thirty (30) days’ written notice to the other party …</div>
+      <div><span class="lab">[2] Terminations</span>  The Term of this Agreement may be terminated by either party upon thirty (30) days’ prior written notice.</div>
+      <div><span class="lab">[3] Terminations</span>  Either party may terminate the employment relationship for any reason at any time upon giving the other party thirty (30) days prior written notice …</div>
+      <div><span class="lab">[4] Terminations</span>  … the breaching party shall be given not less than thirty (30) days’ prior written notice of such material breach …</div>
+      <div><span class="lab">[5] Terminations</span>  Either the Executive or the Company may terminate … upon not less than thirty (30) days prior written notice.</div>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:22px;align-items:center">
+      <p style="font-size:30px"><b class="green">5 / 5</b> résultats de type <i>Terminations</i>, chacun avec un préavis de trente jours.</p>
+    </div>
+    <div class="caution">Sortie réelle enregistrée (presentation/demo_outputs/3_search_success.txt), extraits abrégés. Un cas favorable ne valide pas la recherche.</div>
+  </div>
+</section>
+
+<!-- 13 ─ Échec contrôlé -->
+<section class="slide" data-who="L" data-section="Recherche · échec contrôlé" data-video="S13ControlledFailure"
+ data-notes="« show me termination clauses with a 30-day notice period » : 1er résultat Notices, 30 jours pour notifier une Good Reason ; 1er Terminations en 4e position ; 1 pertinent sur 10. Le filtre vérifie la MENTION, pas le rôle. Correction : extraction structurée (rôle + durée + type de jours). <span class='w'>⚠ Ne pas dire que la recherche comprend le préavis.</span>"></section>
+
+<!-- 14 ─ Audit -->
+<section class="slide" data-who="L" data-section="Audit" data-video="S14Audit"
+ data-notes="Groupes : bail 75,2 % vs 84,3 % attendu ; queue 84,3 % correctes après abstention. Contrefactuels : he↔she 2,3 %, juridiction 3,6 %, OCR 5,4 %. Hors périmètre : combinaison 8/8 abstentions ; BERT seul RGPD → General à 0,90. <span class='w'>⚠ Proxys par mots-clés ; groupes she (37) et hors US (36) trop petits ; type stable ≠ équivalence juridique.</span>"></section>
+
+<!-- 15 ─ Reproductibilité -->
+<section class="slide" data-who="L" data-to="A" data-section="Reproductibilité" data-video="S15Reproducibility"
+ data-notes="uv.lock, révisions figées, empreintes, manifeste ; 92 tests sur copie propre ; logits bit à bit. Non démontré : autre machine, variance entre graines, Python bêta. <span class='w'>⚠ « reproductible sur cette machine ».</span> Passage à Alessandro."></section>
+
+<!-- 16 ─ Usages -->
+<section class="slide" data-who="A" data-section="Usages"
+ data-notes="Traduire l'audit en règles d'usage. Insister : classer un type ≠ juger sa validité.">
+  <div class="body">
+    <h1>Usages autorisés et interdits</h1>
+    <div class="cols roomy" style="grid-template-columns:1fr 1.25fr;align-items:start">
+      <div class="card g">
+        <h2 class="green">Usage prévu</h2>
+        <ul>
+          <li>Aide au <b>tri</b> de clauses <b>anglaises</b> de type SEC</li>
+          <li>Relecture humaine <b>systématique</b></li>
+          <li>Clauses sous le seuil → <span class="amber">juriste</span></li>
+          <li>Recherche de précédents comme point de départ</li>
+        </ul>
+      </div>
+      <div class="card r">
+        <h2 class="red">Ne pas utiliser pour</h2>
+        <ul>
+          <li>Décider seul du type ou de la portée d'une clause</li>
+          <li>Le droit européen, le français, l'allemand : non validé</li>
+          <li>Détecter exhaustivement risques ou clauses abusives</li>
+          <li>Les types absents : RGPD, force majeure, limitation de responsabilité…</li>
+          <li>Retrouver un préavis précis : filtre non sémantique</li>
+          <li>Conclure sur l'équité envers des personnes : proxys</li>
+        </ul>
+      </div>
+    </div>
+    <div class="caution" style="margin-top:22px">Classer un type de clause n'est pas juger sa validité juridique.</div>
+  </div>
+</section>
+
+<!-- 17 ─ Limites -->
+<section class="slide" data-who="A" data-section="Limites et suite"
+ data-notes="Assumer sans s'excuser ; montrer qu'on sait quoi faire ensuite. L'expérience 512 tokens / plus d'époques est proposée, pas faite.">
+  <div class="body">
+    <h1>Limites et suite</h1>
+    <div class="cols roomy" style="align-items:start">
+      <div class="card a">
+        <h2 class="amber">Limites mesurées</h2>
+        <ul>
+          <li>BERT seul sous TF-IDF ; combinaison ≈ +0,7 pt</li>
+          <li>Labels quasi synonymes : <i>Applicable Laws / Governing Laws</i>, <i>Waivers / No Waivers</i></li>
+          <li>Clauses de bail et classes rares</li>
+          <li>Recherche : la notion de préavis n'est pas comprise</li>
+          <li>Une graine, une machine, Python bêta</li>
+        </ul>
+      </div>
+      <div class="card b">
+        <h2 class="blue">Suite proposée (non réalisée)</h2>
+        <ul>
+          <li>Expérience contrôlée : 256 vs 512 tokens, 2 vs plus d'époques avec arrêt anticipé, plusieurs graines</li>
+          <li>Clauses européennes annotées, types manquants</li>
+          <li>Extraction structurée des délais (rôle + durée + type de jours)</li>
+          <li>Fusion des quasi-synonymes validée par des juristes</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 ─ Conclusion -->
+<section class="slide" data-who="A" data-section="Conclusion"
+ data-notes="Trois messages, puis la recommandation. Finir sur « utile pour trier, pas pour décider », puis ouvrir aux questions.">
+  <div class="body">
+    <h1>Conclusion</h1>
+    <div class="kpis">
+      <div class="kpi" style="border-color:var(--blue)"><div class="big blue">88,43</div><div class="lbl">micro-F1 test de la combinaison (macro 82,84)</div></div>
+      <div class="kpi" style="border-color:var(--amber)"><div class="big amber">84,2 %</div><div class="lbl">des clauses traitées, 94,5 % correctes parmi elles</div></div>
+      <div class="kpi" style="border-color:var(--green)"><div class="big green">92</div><div class="lbl">tests réussis · chiffres traçables</div></div>
+    </div>
+    <ul style="margin-top:12px">
+      <li>Une chaîne complète : données → modèles → validation → test → recherche → audit</li>
+      <li>Un résultat honnête : la combinaison bat <b>de peu</b> un baseline fort</li>
+      <li>Une cartographie précise de ce que le système ne sait pas faire</li>
+    </ul>
+    <div class="card b" style="margin-top:auto;display:flex;justify-content:space-between;align-items:center">
+      <p><b>Recommandation :</b> pilote interne, clauses anglaises, juriste dans la boucle, abstention activée.</p>
+      <p class="blue" style="font-size:30px;font-weight:700;white-space:nowrap;margin-left:24px">Utile pour trier, pas pour décider.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Annexes -->
+<section class="slide" data-who="C" data-section="Annexe A1 · abstention" data-notes="Courbe couverture / exactitude parmi les traitées ; points = seuils de validation.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Couverture et exactitude parmi les clauses traitées (test)</h1><div class="fig"><img src="figures/coverage_accuracy.png" alt="Courbe de couverture"></div></div>
+</section>
+<section class="slide" data-who="C" data-section="Annexe A2 · calibration" data-notes="Diagramme de fiabilité ; ECE combinaison 0,017, BERT 0,020, TF-IDF 0,024.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Calibration (diagramme de fiabilité)</h1><div class="fig"><img src="figures/reliability.png" alt="Diagramme de fiabilité"></div></div>
+</section>
+<section class="slide" data-who="C" data-section="Annexe A3 · par classe" data-notes="F1 par classe selon la fréquence : BERT décroche sur la queue.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">F1 par classe selon la fréquence d'entraînement</h1><div class="fig"><img src="figures/per_class_f1_vs_frequency.png" alt="F1 par classe"></div></div>
+</section>
+<section class="slide" data-who="L" data-section="Annexe A4 · audit par groupe" data-notes="Exactitude par groupe proxy, IC de Wilson ; trait noir = attendu d'après le mix de types. Petits groupes non concluants.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Exactitude par groupe (proxys par mots-clés)</h1><div class="fig"><img src="figures/slice_accuracy.png" alt="Exactitude par groupe"></div></div>
+</section>
+<section class="slide" data-who="L" data-section="Annexe A5 · contrefactuels" data-notes="Taux de changement de type par perturbation, trois variantes.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Contrefactuels : taux de changement du type prédit</h1><div class="fig"><img src="figures/counterfactual_flips.png" alt="Contrefactuels"></div></div>
+</section>
+<section class="slide" data-who="A" data-section="Annexe A6 · données" data-notes="Distribution des classes et longueurs en tokens (EDA).">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Données : distribution des classes et longueurs</h1>
+    <div class="cols"><div class="fig"><img src="figures/class_distribution.png" alt="Distribution des classes"></div><div class="fig"><img src="figures/token_lengths.png" alt="Longueurs en tokens"></div></div>
+  </div>
+</section>
+
+<div class="progress" id="progress"></div>
+<div class="pageno" id="pageno"></div>
+<div class="hint">← → naviguer · N notes · F plein écran · R rejouer · S images fixes</div>
+</div></div>
+
+<div id="notes"><h3 id="notes-title"></h3><div id="notes-body"></div></div>
+
+<script>
+(function(){
+  const NAMES = {A:"Alessandro", C:"Charles", L:"Louis"};
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const stage = document.getElementById("stage");
+  let idx = 0, staticMode = false;
+
+  // en-tête et zone vidéo de chaque diapositive
+  slides.forEach((s, i) => {
+    const top = document.createElement("div");
+    top.className = "top";
+    const who = s.dataset.who, to = s.dataset.to;
+    top.innerHTML = '<div class="section">' + (s.dataset.section || "") + '</div>' +
+      '<div class="who ' + who + '">' + NAMES[who] +
+      (to ? '<span class="arrow">→</span><span style="color:var(--' + NAMES[to].toLowerCase() + ')">' + NAMES[to] + '</span>' : '') +
+      '</div>';
+    s.prepend(top);
+    if (s.dataset.video) {
+      const vb = document.createElement("div");
+      vb.className = "vbody";
+      vb.title = "Cliquer pour rejouer l'animation";
+      s.appendChild(vb);
+      const r = document.createElement("div");
+      r.className = "replay"; r.textContent = "animation Manim · clic ou R pour rejouer";
+      s.appendChild(r);
+      vb.addEventListener("click", () => play(s, true));
+    }
+  });
+
+  function poster(name){ return "media/posters/" + name + ".jpg"; }
+
+  function mount(s){
+    const vb = s.querySelector(".vbody");
+    if (!vb) return null;
+    const name = s.dataset.video;
+    if (staticMode) {
+      if (!vb.querySelector("img")) vb.innerHTML = '<img alt="" src="' + poster(name) + '">';
+      return null;
+    }
+    let v = vb.querySelector("video");
+    if (!v) {
+      vb.innerHTML = "";
+      v = document.createElement("video");
+      v.src = "media/" + name + ".mp4";
+      v.muted = true; v.playsInline = true; v.preload = "auto";
+      v.addEventListener("error", () => { vb.innerHTML = '<img alt="" src="' + poster(name) + '">'; });
+      vb.appendChild(v);
+    }
+    return v;
+  }
+
+  function play(s, restart){
+    const v = mount(s);
+    if (!v) return;
+    if (restart) v.currentTime = 0;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+
+  function stopAll(){ document.querySelectorAll("video").forEach(v => v.pause()); }
+
+  function show(i){
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    stopAll();
+    slides.forEach((s, k) => s.classList.toggle("active", k === idx));
+    const s = slides[idx];
+    if (s.dataset.video) play(s, true);
+    // préchargement de la suivante
+    const n = slides[idx + 1];
+    if (n && n.dataset.video) mount(n);
+    document.getElementById("pageno").textContent = (idx + 1) + " / " + slides.length;
+    document.getElementById("progress").style.width = ((idx + 1) / slides.length * 100) + "%";
+    document.getElementById("notes-title").textContent =
+      "Diapositive " + (idx + 1) + " · " + NAMES[s.dataset.who] + (s.dataset.to ? " → " + NAMES[s.dataset.to] : "");
+    document.getElementById("notes-body").innerHTML = s.dataset.notes || "";
+    try { history.replaceState(null, "", "#" + (idx + 1)); } catch (e) {}
+  }
+
+  function fit(){
+    const k = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+    stage.style.transform = "scale(" + k + ")";
+  }
+
+  document.addEventListener("keydown", e => {
+    const k = e.key;
+    if (["ArrowRight","PageDown"," ","Enter"].includes(k)) { e.preventDefault(); show(idx + 1); }
+    else if (["ArrowLeft","PageUp","Backspace"].includes(k)) { e.preventDefault(); show(idx - 1); }
+    else if (k === "Home") show(0);
+    else if (k === "End") show(slides.length - 1);
+    else if (k === "n" || k === "N") document.getElementById("notes").classList.toggle("open");
+    else if (k === "r" || k === "R") play(slides[idx], true);
+    else if (k === "f" || k === "F") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else document.exitFullscreen();
+    }
+    else if (k === "s" || k === "S") {
+      staticMode = !staticMode;
+      document.querySelectorAll(".vbody").forEach(vb => vb.innerHTML = "");
+      show(idx);
+    }
+  });
+
+  window.addEventListener("resize", fit);
+  window.addEventListener("hashchange", () => {
+    const n = parseInt(location.hash.slice(1), 10);
+    if (!isNaN(n) && n - 1 !== idx) show(n - 1);
+  });
+  fit();
+  const start = parseInt((location.hash || "#1").slice(1), 10);
+  show(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+</body>
+</html>
