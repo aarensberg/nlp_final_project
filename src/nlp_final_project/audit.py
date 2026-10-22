@@ -29,6 +29,7 @@ from . import plotting
 from .config import FIGURES, REPORTS, SEED, save_json
 from .data import frequency_buckets, label_names, split_arrays
 from .inference import VARIANTS, Predictor, split_logits
+from .metrics import answers
 from .perturb import PERTURBATIONS, gender_swap, has_gender
 from .slices import CONTRACT_FAMILIES, compute_slices
 
@@ -80,7 +81,7 @@ def slice_report(y, probs: dict, thresholds: dict, slices: dict[str, np.ndarray]
                 p = probs[v][m]
                 pred = p.argmax(1)
                 k = int((pred == y[m]).sum())
-                ans = p.max(1) >= thresholds[v]
+                ans = answers(p.max(1), thresholds[v])
                 expected = float(recall[v][y[m]].mean())
                 ci = wilson(k, n)
                 row[v] = {
@@ -118,7 +119,7 @@ def counterfactuals(P: Predictor, X: list[str], y: np.ndarray, names: list[str])
             b, a = before[v], after[v]
             flips = b.argmax(1) != a.argmax(1)
             thr = P.threshold(v)
-            abst_change = (b.max(1) >= thr) != (a.max(1) >= thr)
+            abst_change = answers(b.max(1), thr) != answers(a.max(1), thr)
             row[v] = {
                 "type_flip_rate": float(flips.mean()), "type_flip_rate_95ci": wilson(int(flips.sum()), len(pairs)),
                 "n_flips": int(flips.sum()),
@@ -167,10 +168,9 @@ def retrieval_audit(Xte, yte, slices) -> dict:
     per_fam: dict[str, list[float]] = {}
     exposure: dict[str, int] = {}
     for i, e in zip(sel, qemb):
-        s = idx.rrf(idx.dense_scores(e), idx.bm25_scores(Xte[i]))
-        h = norm_hash(Xte[i])
-        top = [j for j in np.argsort(-s)[:11] if idx.hashes[j] != h][:10]
-        per_fam.setdefault(fam[i], []).append(float((idx.labels[top] == yte[i]).mean()))
+        s, ranked = idx.scored("hybrid", idx.dense_scores(e), idx.bm25_scores(Xte[i]))
+        top = idx.top(s, ranked, 10, exclude_hash=norm_hash(Xte[i]))
+        per_fam.setdefault(fam[i], []).append(float((idx.labels[top] == yte[i]).sum() / 10))
         for j in top:
             if bank_fam[j] != fam[i]:
                 exposure[bank_fam[j]] = exposure.get(bank_fam[j], 0) + 1
@@ -187,10 +187,11 @@ def retrieval_audit(Xte, yte, slices) -> dict:
     b = idx.embed([gender_swap(Xte[i]) for i in gi], is_question=False)
     jac, same_label_rate = [], []
     for i, ea, eb in zip(gi, a, b):
-        ta = np.argsort(-idx.rrf(idx.dense_scores(ea), idx.bm25_scores(Xte[i])))[:10]
-        tb = np.argsort(-idx.rrf(idx.dense_scores(eb), idx.bm25_scores(gender_swap(Xte[i]))))[:10]
+        ta = np.array(idx.top(*idx.scored("hybrid", idx.dense_scores(ea), idx.bm25_scores(Xte[i])), 10))
+        tb = np.array(idx.top(*idx.scored("hybrid", idx.dense_scores(eb),
+                                          idx.bm25_scores(gender_swap(Xte[i]))), 10))
         jac.append(len(set(ta) & set(tb)) / len(set(ta) | set(tb)))
-        same_label_rate.append(((idx.labels[ta] == yte[i]).mean(), (idx.labels[tb] == yte[i]).mean()))
+        same_label_rate.append(((idx.labels[ta] == yte[i]).sum() / 10, (idx.labels[tb] == yte[i]).sum() / 10))
     sl = np.array(same_label_rate)
     res["gender_swap_top10"] = {
         "n_queries": len(jac), "mean_jaccard": float(np.mean(jac)),
@@ -249,7 +250,7 @@ def run() -> dict:
         for v in VARIANTS:
             r = p_oos[v][j]
             row[v] = {"predicted": names[r.argmax()], "confidence": float(r.max()),
-                      "abstains": bool(r.max() < thresholds[v])}
+                      "abstains": not bool(answers(r.max(), thresholds[v]))}
         items.append(row)
     out["out_of_scope"] = {
         "note": OOS_NOTE, "items": items,

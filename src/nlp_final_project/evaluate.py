@@ -18,14 +18,13 @@ import csv
 
 import numpy as np
 from scipy.stats import binomtest
-from sklearn.metrics import f1_score
 
 from . import plotting
 from .config import FIGURES, REPORTS, SEED, save_json
 from .data import frequency_buckets, label_names, split_arrays
 from .inference import VARIANTS, Predictor, fit_inference_config, split_logits
-from .metrics import (bootstrap_ci, core_metrics, coverage_curve, ece, per_class, reliability, softmax,
-                      top_confusions)
+from .metrics import (MACRO_F1_DEFINITION, answers, bootstrap_ci, core_metrics, coverage_curve, ece, macro_f1,
+                      per_class, reliability, softmax, top_confusions)
 from .retrieval import norm_hash
 
 LABEL = {"ensemble": "Combination (BERT 0.2 + TF-IDF 0.8)", "bert": "Legal-BERT alone",
@@ -47,21 +46,22 @@ def mcnemar(a_correct: np.ndarray, b_correct: np.ndarray, a: str, b: str) -> dic
 
 
 def paired_bootstrap_delta(y, pa, pb, n_boot: int = 1000, seed: int = SEED) -> dict:
-    """95% CI of (A - B) for micro- and macro-F1, resampling the same clauses for both."""
+    """95% CI of (A - B) for micro- and macro-F1, resampling the same clauses for both.
+
+    Same macro-F1 definition as the point scores (fixed 100-label universe).
+    Resampling unit = clause (no contract identifier in LEDGAR)."""
     rng = np.random.default_rng(seed)
     n = len(y)
     d_mi, d_ma = [], []
     for _ in range(n_boot):
         i = rng.integers(0, n, n)
         d_mi.append((pa[i] == y[i]).mean() - (pb[i] == y[i]).mean())
-        d_ma.append(f1_score(y[i], pa[i], average="macro", zero_division=0)
-                    - f1_score(y[i], pb[i], average="macro", zero_division=0))
+        d_ma.append(macro_f1(y[i], pa[i]) - macro_f1(y[i], pb[i]))
     ci = lambda a: [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]  # noqa: E731
     return {
         "delta_micro_f1_points": float(((pa == y).mean() - (pb == y).mean()) * 100),
         "delta_micro_f1_95ci_points": [x * 100 for x in ci(d_mi)],
-        "delta_macro_f1_points": float((f1_score(y, pa, average="macro", zero_division=0)
-                                        - f1_score(y, pb, average="macro", zero_division=0)) * 100),
+        "delta_macro_f1_points": float((macro_f1(y, pa) - macro_f1(y, pb)) * 100),
         "delta_macro_f1_95ci_points": [x * 100 for x in ci(d_ma)],
     }
 
@@ -90,6 +90,9 @@ def run() -> dict:
         "primary_variant": "ensemble",
         "variants_described": LABEL,
         "parameters": "fitted on validation, see reports/inference_config.json",
+        "macro_f1_definition": MACRO_F1_DEFINITION,
+        "bootstrap": "1000 resamples of test CLAUSES (no contract id available, so intervals ignore "
+                     "within-contract correlation and are likely somewhat too narrow)",
         "test_n": int(len(yt)),
         "test_n_without_train_duplicates": int(unseen.sum()),
         "variants": {},
@@ -103,7 +106,7 @@ def run() -> dict:
         for r, c in zip(pc, range(len(names))):
             r["train_count"], r["bucket"] = int(train_count[c]), buckets[c]
         thr = P.threshold(v)
-        ans = pt[v].max(1) >= thr
+        ans = answers(pt[v].max(1), thr)
         out["variants"][v] = {
             "description": LABEL[v],
             "test": core_metrics(yt, pred) | bootstrap_ci(yt, pred),
@@ -125,7 +128,7 @@ def run() -> dict:
                 "validation_coverage": cfg["abstention"]["validation_coverage"][v],
                 "test_coverage": float(ans.mean()),
                 "test_n_handled": int(ans.sum()),
-                "test_correct_rate_among_handled": float((pred[ans] == yt[ans]).mean()),
+                "test_correct_rate_among_handled": float((pred[ans] == yt[ans]).mean()) if ans.any() else None,
                 "test_correct_rate_among_abstained": float((pred[~ans] == yt[~ans]).mean()) if (~ans).any() else None,
             },
             "coverage_curve_test": coverage_curve(pt[v], yt),
@@ -201,9 +204,11 @@ def _figures(per_cls, pt, raw_t, yt, out) -> None:
     for v in VARIANTS:
         cc = out["variants"][v]["coverage_curve_test"]
         ab = out["variants"][v]["abstention"]
+        cc = [r for r in cc if r["accuracy"] is not None]
         ax.plot([r["coverage"] for r in cc], [r["accuracy"] for r in cc], lw=2, color=COLOR[v], label=LABEL[v])
-        ax.scatter([ab["test_coverage"]], [ab["test_correct_rate_among_handled"]], s=60, color=COLOR[v],
-                   edgecolor=plotting.SURFACE, linewidth=1.5, zorder=4)
+        if ab["test_correct_rate_among_handled"] is not None:
+            ax.scatter([ab["test_coverage"]], [ab["test_correct_rate_among_handled"]], s=60, color=COLOR[v],
+                       edgecolor=plotting.SURFACE, linewidth=1.5, zorder=4)
     ax.axhline(0.95, color=plotting.INK_2, lw=1, ls="--")
     ax.text(0.52, 0.952, "95% validation target (not a test guarantee)", ha="right", va="bottom",
             fontsize=7, color=plotting.INK_2)

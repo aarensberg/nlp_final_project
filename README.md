@@ -8,15 +8,15 @@ Prototype de classification de clauses contractuelles, de recherche dans une ban
 
 | | Résultat sur le test LEDGAR (10 000 clauses) |
 |---|---|
-| **Système livré** : combinaison Legal-BERT (poids 0,2) + TF-IDF (0,8) | micro-F1 **88,43 %** [87,78 ; 89,06], macro-F1 **82,84 %** [81,57 ; 83,72] |
+| **Système livré** : combinaison Legal-BERT (poids 0,2) + TF-IDF (0,8) | micro-F1 **88,43 %** [87,78 ; 89,06], macro-F1 **82,84 %** [81,57 ; 83,76] |
 | TF-IDF + régression logistique (baseline) | 87,70 % / 82,19 % |
 | Legal-BERT fine-tuné seul (2 époques, 256 tokens) | 86,35 % / 76,27 % |
 | Gain de la combinaison sur TF-IDF | **modeste** : +0,73 pt micro-F1 [+0,51 ; +0,98], +0,65 pt macro-F1 [+0,31 ; +1,00] |
 | Abstention (seuil fixé sur la validation) | 84,2 % des clauses traitées, **94,5 % de classifications correctes parmi les clauses traitées** |
-| Recherche (clause → clauses similaires) | P@1 77,5 %, P@10 66,4 % (même type LEDGAR) |
+| Recherche (clause → clauses similaires) | P@1 77,4 %, P@10 66,4 % (même type LEDGAR) |
 | Principales faiblesses | classes rares, labels quasi synonymes, clauses de bail (*real estate*), requêtes « préavis de N jours » |
 
-Les intervalles entre crochets sont des intervalles de confiance bootstrap à 95 % (1 000 rééchantillonnages des clauses du test).
+Les intervalles entre crochets sont des intervalles de confiance bootstrap à 95 % (1 000 rééchantillonnages des clauses du test). Les chiffres sont ceux de la version actuelle (§13 pour l'historique).
 
 ---
 
@@ -33,6 +33,7 @@ Les intervalles entre crochets sont des intervalles de confiance bootstrap à 95
 10. [Reproductibilité](#10-reproductibilité)
 11. [Usages autorisés et interdits](#11-usages-autorisés-et-interdits)
 12. [Limites et suite](#12-limites-et-suite)
+13. [Versions des résultats](#13-versions-des-résultats)
 
 ---
 
@@ -110,7 +111,7 @@ uv sync
 | Index + évaluation de la recherche | `uv run nlp-final-project index` | ~5 min la 1re fois |
 | Audit | `uv run nlp-final-project audit` | ~10 min |
 | Tout sauf l'entraînement | `uv run nlp-final-project all` | refuse de s'exécuter si les modèles manquent ; **n'entraîne jamais** |
-| Tests | `uv run pytest` | ~40 s (32 tests) |
+| Tests | `uv run pytest` | ~1 min 30 (69 tests) |
 
 **Artefacts lourds.** Les poids (440 Mo), le modèle TF-IDF (146 Mo), les embeddings (90 Mo) et les logits sont dans `artifacts/`, exclu de Git. On les reconstruit avec `baseline`, `train`, `evaluate` puis `index`. Les rapports (`reports/`) sont versionnés. Un rapport n'est jamais réécrit à partir d'un cache dont l'empreinte ne correspond plus.
 
@@ -142,9 +143,20 @@ La requête de démonstration ci-dessus, proche du texte des clauses, renvoie ci
 
 Courbe : validation 84,18 / 74,02 après l'époque 1, puis 86,37 / 77,58 après l'époque 2 (micro / macro-F1).
 
-**Hypothèses non testées.** Legal-BERT seul est sous le baseline TF-IDF, surtout sur les classes rares (macro-F1 de la queue : 61,9 % contre 74,3 %). Deux explications sont plausibles : un **sous-entraînement** (2 époques au lieu de 20 maximum dans LexGLUE) et la **troncature** à 256 tokens. Ce sont des hypothèses : aucune expérience comparative n'a été menée pour les départager.
+**Pourquoi Legal-BERT seul est sous le baseline : hypothèses, pas causes prouvées.** Legal-BERT seul est sous TF-IDF, surtout sur les classes rares (macro-F1 de la queue : 61,9 % contre 74,3 %). Deux hypothèses ont des indices, sans preuve :
+- **Entraînement trop court.**
+  - Pour : le macro-F1 de validation montait encore nettement entre l'époque 1 et l'époque 2 (74,0 → 77,6) ; le taux d'apprentissage est descendu à 0 en 2 époques alors que LexGLUE autorise 20 époques avec arrêt anticipé ; les classes rares, vues le moins souvent, sont les plus touchées.
+  - Contre ou non vérifié : une seule graine, et pas d'époque 3 pour observer un plateau.
+- **Troncature à 256 tokens.**
+  - Pour : sur les clauses de plus de 200 mots, BERT perd 3,9 points d'exactitude face à TF-IDF (86,4 contre 90,3), contre 0,3 point sur les clauses de 31 à 80 mots (audit, §8).
+  - Contre : seules 11,9 % des clauses dépassent 256 tokens, ce qui ne peut pas expliquer tout l'écart.
+- **Autres explications non exclues** : hyperparamètres (taux d'apprentissage, taille de lot), variance entre graines, labels quasi synonymes. Aucune expérience comparative n'a été menée pour les départager (voir §12).
 
-**Reprise d'entraînement.** Un checkpoint est écrit toutes les 300 étapes, de façon atomique. Il contient les poids, l'optimiseur, le scheduler, la position dans l'époque, les états aléatoires et la configuration. La reprise est **refusée** si la configuration diffère. En particulier, `--resume --epochs 3` ne peut pas prolonger le run actuel : son scheduler a été construit pour 2 époques et le taux d'apprentissage est déjà à 0. Le checkpoint existant, écrit avant cette sécurité, n'a pas de configuration enregistrée, il est donc refusé (vérifié). L'ordre des données et les états aléatoires sont restaurés, mais **l'identité numérique d'une reprise sur MPS n'est pas démontrée**.
+**Reprise d'entraînement.** Un checkpoint est écrit toutes les 300 étapes, de façon atomique. Il contient les poids, l'optimiseur, le scheduler, la position dans l'époque, les états aléatoires et la configuration. La reprise est **refusée** si la configuration diffère. En particulier, `--resume --epochs 3` ne peut pas prolonger le run actuel : son scheduler a été construit pour 2 époques et le taux d'apprentissage est déjà à 0. Le checkpoint existant, écrit avant cette sécurité, n'a pas de configuration enregistrée, il est donc refusé (vérifié). **Ce qui est vérifié** (`tests/test_resume.py`) : sur CPU, avec un mini-BERT local et du dropout actif, un entraînement interrompu puis repris donne **exactement** le même état qu'un entraînement continu. L'égalité est vérifiée pour les paramètres, l'état de l'optimiseur, le scheduler, les compteurs d'étapes, la meilleure métrique et les états aléatoires Python, NumPy et torch. Trois points d'interruption sont testés : milieu d'époque, dernière étape avant la validation, début de l'époque suivante.
+
+Ce test a révélé un défaut : chaque création d'itérateur `DataLoader` consommait le générateur aléatoire **global**. Une reprise, qui crée un itérateur de plus, désynchronisait donc le dropout. Sans le correctif (un générateur dédié par `DataLoader`), 2 des 3 scénarios divergent. Le run Legal-BERT livré n'a jamais été repris, il n'est donc pas affecté.
+
+**Non vérifié** : l'identité d'une reprise sur MPS ou en bfloat16.
 
 ## 6. Résultats de classification
 
@@ -153,21 +165,30 @@ Tous les paramètres d'inférence sont choisis **sur la validation uniquement** 
 - le poids BERT de 0,2, retenu sur une grille de 0 à 1 par pas de 0,05 au meilleur macro-F1 ;
 - un seuil d'abstention **par variante**, au plus bas niveau qui atteint 95 % de classifications correctes sur la validation.
 
-Le test n'a servi à aucun réglage. Détail complet : [reports/eval_metrics.json](reports/eval_metrics.json) ; scores par classe (précision, rappel et F1 de chaque variante) : [reports/per_class_test.csv](reports/per_class_test.csv).
+Le test n'a servi à aucun réglage.
+
+**Définitions.**
+- **Macro-F1** : moyenne sur l'**univers fixe des 100 labels**, avec F1_c = 2TP / (nombre de vrais + nombre de prédits). Un label sans aucun exemple, ni vrai ni prédit, compte 1, puisqu'aucune erreur n'est possible sur lui. La même définition sert pour les scores ponctuels, le bootstrap simple, le bootstrap apparié et le choix du poids.
+  - Ce choix compte sur la **validation**, où *Books* est absent. BERT, qui ne prédit jamais *Books*, obtient 77,80 avec cette convention et 76,80 si l'on comptait 0 ; la combinaison et TF-IDF prédisent *Books* une fois, la convention ne les touche pas.
+  - Sur le **test**, les 100 labels sont présents : les scores ponctuels ne dépendent pas de la convention.
+- **Bootstrap** : rééchantillonnage par **clause**. LEDGAR n'a pas d'identifiant de contrat, donc la corrélation entre clauses d'un même contrat est ignorée et les intervalles sont probablement un peu trop étroits.
+- **Seuil d'abstention** : candidats = groupes complets de confiances égales ; on retient le plus bas seuil dont l'ensemble **réellement accepté par `>=`** atteint la cible. Si aucun ensemble non vide ne l'atteint, le seuil vaut `null` et la variante s'abstient sur tout ; la CLI et les JSON l'indiquent explicitement. L'ancienne version coupait parfois au milieu d'un groupe d'égalités : son seuil TF-IDF acceptait 8 328 clauses de validation à 94,993 %, sous la cible.
+
+Détail complet : [reports/eval_metrics.json](reports/eval_metrics.json) ; scores par classe (précision, rappel et F1 de chaque variante) : [reports/per_class_test.csv](reports/per_class_test.csv).
 
 | Variante | micro-F1 test [IC 95 %] | macro-F1 test [IC 95 %] | sans doublons train (n = 9 718) | macro-F1 tête / milieu / queue |
 |---|---|---|---|---|
-| **Combinaison** | **88,43** [87,78 ; 89,06] | **82,84** [81,57 ; 83,72] | 88,11 / 82,49 | 90,4 / 83,6 / 74,8 |
-| TF-IDF | 87,70 [87,02 ; 88,37] | 82,19 [80,89 ; 83,03] | 87,36 / 81,83 | 89,8 / 82,8 / 74,3 |
-| Legal-BERT seul | 86,35 [85,66 ; 87,02] | 76,27 [75,20 ; 77,47] | 86,14 / 76,10 | 89,6 / 77,7 / 61,9 |
+| **Combinaison** | **88,43** [87,78 ; 89,06] | **82,84** [81,57 ; 83,76] | 88,11 / 82,49 | 90,4 / 83,6 / 74,8 |
+| TF-IDF | 87,70 [87,02 ; 88,37] | 82,19 [80,93 ; 83,12] | 87,36 / 81,83 | 89,8 / 82,8 / 74,3 |
+| Legal-BERT seul | 86,35 [85,66 ; 87,02] | 76,27 [75,20 ; 77,63] | 86,14 / 76,10 | 89,6 / 77,7 / 61,9 |
 
 **Comparaisons appariées** (mêmes clauses ; IC bootstrap de la différence) :
 
 | | Δ micro-F1 | Δ macro-F1 | McNemar (désaccords correct/incorrect) |
 |---|---|---|---|
 | Combinaison − TF-IDF | +0,73 pt [+0,51 ; +0,98] | +0,65 pt [+0,31 ; +1,00] | 106 contre 33, p = 4·10⁻¹⁰ |
-| Combinaison − BERT | +2,08 pt [+1,54 ; +2,60] | +6,57 pt [+5,26 ; +7,51] | 466 contre 258, p = 9·10⁻¹⁵ |
-| BERT − TF-IDF | −1,35 pt [−1,93 ; −0,77] | −5,92 pt [−6,88 ; −4,54] | 362 contre 497, p = 5·10⁻⁶ |
+| Combinaison − BERT | +2,08 pt [+1,54 ; +2,60] | +6,57 pt [+5,20 ; +7,51] | 466 contre 258, p = 9·10⁻¹⁵ |
+| BERT − TF-IDF | −1,35 pt [−1,93 ; −0,77] | −5,92 pt [−6,88 ; −4,50] | 362 contre 497, p = 5·10⁻⁶ |
 
 Le gain de la combinaison sur TF-IDF est **réel mais modeste**. Le test de McNemar porte sur le taux d'erreur (exactitude) : **ce n'est pas un test du macro-F1**. Pour le macro-F1, seul l'IC bootstrap apparié est rapporté.
 
@@ -181,7 +202,7 @@ Le gain de la combinaison sur TF-IDF est **réel mais modeste**. Le test de McNe
 |---|---|---|---|---|---|
 | Combinaison | 0,017 | 0,709 | 84,1 % → 84,2 % | **94,5 %** | 56,0 % |
 | Legal-BERT | 0,029 → 0,020 (T = 1,04) | 0,851 | 76,5 % → 76,4 % | 94,8 % | 59,0 % |
-| TF-IDF | 0,024 → 0,024 (T = 0,91) | 0,756 | 83,3 % → 83,2 % | 94,6 % | 53,5 % |
+| TF-IDF | 0,024 → 0,024 (T = 0,91) | 0,756 | 83,3 % → 83,2 % (83,26 % / 83,21 %) | 94,6 % | 53,5 % |
 
 La cible de 95 % est atteinte sur la validation, pas tout à fait sur le test (94,5 %). **Ce n'est pas une garantie sur le test ni sur de futurs contrats**, a fortiori sur des contrats d'un autre type ou d'une autre juridiction.
 
@@ -201,18 +222,22 @@ Deux protocoles **séparés** :
 |---|---|---|---|---|
 | Dense | 76,6 % | 68,5 % | 64,8 % | 0,814 |
 | BM25 | 77,0 % | 68,4 % | 64,6 % | 0,817 |
-| **Hybride** | **77,5 %** | **70,2 %** | **66,4 %** | **0,824** |
+| **Hybride** | **77,4 %** | **70,1 %** | **66,4 %** | **0,824** |
 
 Labels les plus mal servis (P@10 hybride) : *Assigns* 5 %, *Agreements* 10 %, *Miscellaneous* 15 %, *Applicable Laws* 18 %, *Jurisdictions* 21 %, *Venues* 22 %.
 
 **B. 40 questions écrites à la main.** Elles ont été rédigées par l'équipe **avant** de voir les résultats, avec pour chacune la liste des labels acceptés (labels quasi synonymes acceptés ensemble), et n'ont pas été modifiées depuis. Ce n'est **pas un benchmark juridique indépendant** : les questions et les critères viennent de ceux qui ont construit le système. Résultats question par question : [reports/retrieval_questions.json](reports/retrieval_questions.json).
 
-| Mode | P@1 | P@10 | Mention de la durée demandée (4 questions) |
-|---|---|---|---|
-| Dense | 85,0 % | 87,5 % | 67,5 % |
-| BM25 | 82,5 % | 83,0 % | 90,0 % |
-| Hybride | 92,5 % | 89,3 % | 92,5 % |
-| Hybride + filtre de durée | 92,5 % | 89,0 % | 100 % (par construction) |
+| Mode | P@1 | `precision_at_10` (÷ 10) | `precision_among_returned` | Résultats renvoyés (moy.) | Mention de la durée demandée (4 questions, ÷ 10) |
+|---|---|---|---|---|---|
+| Dense | 85,0 % | 87,5 % | 87,5 % | 10 | 67,5 % |
+| BM25 | 82,5 % | 83,0 % | 83,0 % | 10 | 90,0 % |
+| Hybride | 92,5 % | 89,3 % | 89,3 % | 10 | 92,5 % |
+| Hybride + filtre de durée | 95,0 % | 89,0 % | 89,0 % | 10 | 100 % (par construction) |
+
+`precision_at_10` divise toujours par 10 : un résultat manquant compte comme un échec. `precision_among_returned` divise par le nombre de résultats renvoyés. Ici, chaque question a renvoyé 10 résultats, donc les deux sont égaux. La pertinence est **approchée par le label LEDGAR** : un résultat est « pertinent » si son label est dans la liste acceptée, qu'il réponde ou non vraiment à la question.
+
+**Changement depuis la version archivée.** P@1 du mode hybride + filtre : 92,5 % → 95,0 %. La question « notice of termination of at least 60 days » passe de 0 à 1, parce que le classement se fait désormais parmi les seules clauses admissibles (règles ci-dessous). Ce n'est pas une règle conçue pour une question, mais la mesure porte sur des questions **déjà vues** : c'est un contrôle de non-régression, pas une validation.
 
 **Échecs, en particulier sur la question vitrine.**
 
@@ -222,6 +247,15 @@ Labels les plus mal servis (P@10 hybride) : *Assigns* 5 %, *Agreements* 10 %, *M
 | « notice of termination of at least 60 days » | 0 | 0,4 | le filtre impose exactement 60 jours : « au moins » n'est pas compris |
 | « termination for convenience with ninety days written notice » | 1 | 0,5 | les 3 premiers sont corrects, puis viennent des clauses *Terms* |
 | « payment due within 30 days of invoice » | 1 | 0,9 | bon |
+
+**Règles de classement** ([`retrieval.py`](src/nlp_final_project/retrieval.py)) :
+1. Les filtres (durée, label) définissent d'abord l'ensemble des clauses **admissibles**.
+2. Chaque signal ne classe que des clauses admissibles au score informatif : toutes pour le dense ; pour BM25, seulement celles dont le score est strictement positif (un score nul signifie aucun mot commun).
+3. La fusion RRF porte sur les 200 premiers de chaque classement. Une clause classée par aucun des deux signaux n'a pas de score et **n'est jamais renvoyée**. La liste peut donc contenir moins de k résultats ; la CLI le signale.
+4. Les égalités sont départagées par la position dans la banque, de façon déterministe.
+5. Une requête avec plusieurs durées garde par défaut les clauses qui en mentionnent **au moins une** (`--period-match any`), ou **toutes** avec `--period-match all`.
+
+Avant ce correctif, la fusion se faisait sur toute la banque puis on filtrait. Une clause admissible hors des 200 premiers recevait un score de 0 et pouvait être renvoyée sans aucun classement informatif. De plus, un corpus de moins de 200 clauses faisait planter la recherche. Les deux cas sont couverts par des tests.
 
 **Limites du filtre de durée (`day_periods`).**
 - Il vérifie qu'une clause **mentionne** une durée de N jours, **pas le rôle juridique** de cette durée (préavis, paiement, délai de remédiation…).
@@ -303,7 +337,7 @@ L'échantillon est minuscule. **Un seuil de confiance réduit ces erreurs mais n
 
 | Constat | Valeur |
 |---|---|
-| P@10 hybride par famille (150 requêtes chacune) | crédit 79,5 %, M&A 77,1 %, emploi 71,3 %, générique 71,0 %, commercial 68,3 %, **bail 60,0 %** |
+| P@10 hybride par famille (150 requêtes chacune) | crédit 79,6 %, M&A 77,1 %, emploi 71,3 %, générique 71,0 %, commercial 68,3 %, **bail 59,9 %** |
 | Exposition des familles hors famille de la requête | proche de leur part dans la banque ; crédit sous-représenté (17,9 % des résultats contre 26,2 % de la banque) |
 | Genre *he* ↔ *she* sur 300 requêtes | Jaccard moyen du top-10 : 0,85 ; listes identiques dans 44 % des cas ; P@10 67,8 % → 67,5 % : **les précédents montrés changent** même si la pertinence reste stable |
 | Composition de la banque | 3,5 % des clauses ne contiennent que *he*, 0,3 % que *she* : les précédents montrés à un juriste sont majoritairement au masculin |
@@ -316,7 +350,7 @@ Source primaire : Chalkidis et al., *LexGLUE: A Benchmark Dataset for Legal Lang
 - LexGLUE : jusqu'à 20 époques avec arrêt anticipé, 512 tokens, batch de 8, fp16 ; meilleure de 5 graines selon la validation ; SVM sur 1-3 grammes avec recherche de grille.
 - Ici : 2 époques, 256 tokens, une seule graine ; régression logistique sur 1-2 grammes.
 
-La comparaison est donc **indicative**. Notre baseline TF-IDF (87,7 / 82,2) est du même ordre que le leur ; notre Legal-BERT (86,4 / 76,3) est nettement en dessous du leur, ce qui est cohérent avec l'hypothèse du sous-entraînement, sans la prouver.
+La comparaison est donc **indicative**. Notre baseline TF-IDF (87,7 / 82,2) est du même ordre que le leur. Notre Legal-BERT (86,4 / 76,3) est nettement en dessous du leur : c'est compatible avec les hypothèses du §5 (entraînement court, troncature), mais l'écart de protocole empêche d'en isoler la cause.
 
 ## 10. Reproductibilité
 
@@ -330,7 +364,19 @@ La comparaison est donc **indicative**. Notre baseline TF-IDF (87,7 / 82,2) est 
 | Vérifications effectuées | logits recalculés avec la nouvelle interface identiques aux anciens (écart 0,0) ; scores de référence retrouvés au centième ; inférence clause par clause identique au cache sur M3 (écart 0,0) ; sur CPU (float32 au lieu de bfloat16), écart max 0,012 (BERT), aucun label changé sur 200 clauses ; index reconstruit avec des métriques identiques |
 | Limites du déterminisme | bfloat16 et noyaux MPS : non garantis bit à bit d'une machine à l'autre ; un ré-entraînement donnera des scores proches, pas identiques |
 
-Tests (`uv run pytest`, 32 tests) : alignement des labels, probabilités normalisées, combinaison pondérée, abstention par variante, cohérence entre l'inférence commune et l'évaluation, refus d'une configuration périmée, invalidation des caches, refus d'une reprise incompatible, filtre de durée (y compris ses limites), BM25, perturbations, smoke tests de la CLI (`classify`, `search`, aide).
+**Politique des caches** :
+- **Logits** : la clé contient l'identité des poids et du tokenizer, mais aussi le **contexte numérique** (appareil, précision bfloat16 ou float32, versions de torch et transformers, règle de batching) et la version du schéma d'inférence. Des poids identiques calculés ailleurs ne donnent pas des nombres identiques : passer du CPU au GPU MPS/CUDA **recalcule** les logits, il ne les réutilise jamais.
+- **Index de recherche** : les embeddings de la banque sont un artefact stocké, au même titre que des poids. Ils sont **réutilisés** d'un appareil à l'autre (les réencoder sur CPU prendrait de l'ordre d'une heure) ; leur contexte de construction est enregistré et tout écart est signalé sur stderr.
+- **Inférence sur un autre appareil** : `classify` avertit sur stderr quand les seuils ont été choisis sur des logits d'un autre contexte.
+
+**Tests** (`uv run pytest`, 69 tests) :
+
+| Fichier | Besoin d'artefacts | Contenu |
+|---|---|---|
+| `test_units.py` (36) | non | seuils (égalités, cible impossible, confiance 1, tout correct, couverture nulle), macro-F1 (classe qui disparaît), classement filtré (moins de k, aucun candidat, corpus < profondeur, égalités, plusieurs durées), filtre de durée, BM25, perturbations, caches, reprise refusée |
+| `test_cli.py` (18) | non | `--help` de chaque commande dans un dossier vide (rien n'est écrit), arguments invalides (`-k 0`, requête vide), `all` sans modèles, contexte numérique et invalidation |
+| `test_resume.py` (4) | non (CPU, mini-modèle local) | reprise = run continu, à 3 points d'interruption |
+| `test_artifacts.py` (11) | **oui** (ignorés si `artifacts/` est vide) | ordre des labels, poids 0,2, seuils par variante, seuils qui atteignent la cible sur l'ensemble réellement accepté, reproduction des scores, refus d'une configuration périmée, inférence brute contre cache, CLI `classify --json` et `search` |
 
 ## 11. Usages autorisés et interdits
 
@@ -347,7 +393,7 @@ Tests (`uv run pytest`, 32 tests) : alignement des labels, probabilités normali
 
 ## 12. Limites et suite
 
-- **Legal-BERT est sous-entraîné et tronqué**, et reste sous le baseline TF-IDF. La combinaison ne gagne qu'environ 0,7 point.
+- **Legal-BERT seul reste sous le baseline TF-IDF.** Un entraînement trop court et la troncature sont des hypothèses argumentées (§5), pas des causes établies. La combinaison ne gagne qu'environ 0,7 point.
 - Les **labels quasi synonymes** de LEDGAR (Governing / Applicable Laws, Waivers / No Waivers…) plafonnent les scores. Une check-list métier les fusionnerait sans doute.
 - **Clauses de bail et classes rares** : performance et abstention insuffisantes.
 - Recherche : les questions avec contrainte de durée échouent sur la notion de préavis ; une extraction structurée (rôle + durée + type de jours) serait nécessaire.
@@ -357,4 +403,29 @@ Tests (`uv run pytest`, 32 tests) : alignement des labels, probabilités normali
 
 ---
 
-Rapports archivés avant la refonte de l'inférence : [reports/archive/2026-10-21_initial/](reports/archive/2026-10-21_initial/).
+## 13. Versions des résultats
+
+| Version | Où | Ce qui la distingue |
+|---|---|---|
+| **Actuelle** | `reports/*.json`, `reports/figures/` | seuils à égalités complètes, macro-F1 sur l'univers fixe de 100 labels, recherche filtrée classée parmi les clauses admissibles, contexte numérique dans les caches |
+| Avant stabilisation | [reports/archive/2026-10-22_before_stabilisation/](reports/archive/2026-10-22_before_stabilisation/) | inférence commune, 3 variantes, audit complet (commit `2f581da`) |
+| Initiale | [reports/archive/2026-10-21_initial/](reports/archive/2026-10-21_initial/) | avant l'inférence commune |
+| Références externes | §9 | LexGLUE, protocole différent |
+
+**Ce qui a changé entre « avant stabilisation » et « actuelle »** (aucun réentraînement ; les logits recalculés sont identiques bit à bit, donc **aucune prédiction n'a changé**) :
+
+| Grandeur | Avant | Actuelle | Cause |
+|---|---|---|---|
+| Scores ponctuels test (3 variantes) | inchangés | inchangés | — |
+| IC macro-F1 combinaison | [81,57 ; 83,72] | [81,57 ; 83,76] | définition du macro-F1 dans le bootstrap |
+| IC macro-F1 TF-IDF | [80,89 ; 83,03] | [80,93 ; 83,12] | idem |
+| IC macro-F1 BERT | [75,20 ; 77,47] | [75,20 ; 77,63] | idem |
+| IC Δ macro combinaison − BERT | [+5,26 ; +7,51] | [+5,20 ; +7,51] | idem |
+| IC Δ macro BERT − TF-IDF | [−6,88 ; −4,54] | [−6,88 ; −4,50] | idem |
+| Macro-F1 validation BERT | 77,58 | 77,80 | *Books* absent de la validation (convention) |
+| Seuil TF-IDF | 0,75615 | 0,75621 | égalités : 2 clauses de validation, toutes deux fausses, exclues |
+| Couverture validation TF-IDF | 83,28 % | 83,26 % | idem ; la couverture test (83,21 %) ne change pas |
+| Recherche hybride clause → clause P@1 / P@5 / MRR | 77,47 / 70,19 / 0,8241 | 77,37 / 70,11 / 0,8236 | BM25 ignore les scores nuls ; départage déterministe |
+| 40 questions, hybride + filtre, P@1 | 92,5 % | 95,0 % | classement parmi les admissibles (questions déjà vues) |
+| Audit recherche : P@10 bail / crédit | 60,0 / 79,5 % | 59,9 / 79,6 % | nouveau classement |
+| Audit par groupes, contrefactuels, hors périmètre | — | identiques | — |

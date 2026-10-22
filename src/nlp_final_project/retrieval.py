@@ -105,6 +105,21 @@ def encoder():
 MAX_SEQ_LENGTH = 256
 
 
+def encoder_context() -> dict:
+    """Numeric context of embeddings computed now (informational for the stored bank).
+
+    Policy: the bank embeddings are a stored artifact, like model weights. They are
+    REUSED across backends (re-encoding 59k clauses on CPU would take on the order of
+    an hour); a mismatch is reported on stderr. Query embeddings are computed in the
+    current context, so scores can differ slightly from the reported evaluation.
+    """
+    import sentence_transformers
+    import torch
+
+    return {"backend": get_device().type, "precision": "float32",
+            "torch": torch.__version__, "sentence_transformers": sentence_transformers.__version__}
+
+
 def index_spec() -> dict:
     """What the index depends on. Any change invalidates the stored index."""
     X, y = split_arrays("train")
@@ -147,7 +162,8 @@ class ClauseIndex:
         np.save(INDEX_DIR / "embeddings.npy", emb)
         np.save(INDEX_DIR / "labels.npy", labels)
         (INDEX_DIR / "texts.json").write_text(json.dumps(texts))
-        save_json({"spec": index_spec(), "n_clauses": len(texts), "dim": int(emb.shape[1]),
+        save_json({"spec": index_spec(), "built_with": encoder_context(),
+                   "n_clauses": len(texts), "dim": int(emb.shape[1]),
                    "embeddings_sha256": sha256_file(INDEX_DIR / "embeddings.npy"),
                    "encode_seconds": time.time() - t0}, INDEX_DIR / "meta.json")
         return cls(texts, labels, emb)
@@ -159,11 +175,19 @@ class ClauseIndex:
             return cls.build()
         meta = json.loads(meta_path.read_text())
         if meta.get("spec") != index_spec():
-            print("[index] stored index was built with a different encoder/config/bank; rebuilding")
+            print("[index] stored index was built with a different encoder/config/bank; rebuilding",
+                  file=sys.stderr)
             return cls.build()
         if verify_files and sha256_file(INDEX_DIR / "embeddings.npy") != meta.get("embeddings_sha256"):
-            print("[index] embeddings file does not match its recorded fingerprint; rebuilding")
+            print("[index] embeddings file does not match its recorded fingerprint; rebuilding",
+                  file=sys.stderr)
             return cls.build()
+        built, now = meta.get("built_with"), encoder_context()
+        if built is None:
+            print("[index] build context not recorded", file=sys.stderr)
+        elif any(built.get(k) != now[k] for k in now):
+            print(f"[index] bank embeddings built with {built}; queries now encoded with {now} "
+                  "(reused by policy; scores may differ slightly)", file=sys.stderr)
         return cls(json.loads((INDEX_DIR / "texts.json").read_text()),
                    np.load(INDEX_DIR / "labels.npy"), np.load(INDEX_DIR / "embeddings.npy"))
 
@@ -196,45 +220,92 @@ class ClauseIndex:
     def bm25_scores(self, query: str) -> np.ndarray:
         return self.bm25.get_scores(query)
 
+    # ---------------------------------------------------- ranking rules ----
+    # 1. Filters (period, label) define the ELIGIBLE set first.
+    # 2. Each signal ranks only eligible documents with an informative score:
+    #    dense = every eligible document; BM25 = eligible documents with score > 0
+    #    (a zero BM25 score shares no term with the query and carries no order).
+    # 3. RRF fuses the top `depth` of each ranking. A document ranked by neither
+    #    signal has no fused score and is NEVER returned: results are not padded.
+    # 4. Ties are broken by bank position (lower index first) - deterministic.
     @staticmethod
-    def rrf(*score_arrays: np.ndarray, k: int = 60, depth: int = 200) -> np.ndarray:
-        """Reciprocal-rank fusion over the top `depth` of each ranking."""
-        fused = np.zeros_like(score_arrays[0], dtype=np.float64)
-        for s in score_arrays:
-            top = np.argpartition(-s, depth)[:depth]
-            top = top[np.argsort(-s[top])]
-            fused[top] += 1.0 / (k + np.arange(1, depth + 1))
+    def ranking(scores: np.ndarray, mask: np.ndarray, depth: int | None = None) -> np.ndarray:
+        """Indices of `mask` documents sorted by score desc, ties by index asc."""
+        idx = np.flatnonzero(mask)
+        order = idx[np.lexsort((idx, -scores[idx]))]
+        return order if depth is None else order[:depth]
+
+    @staticmethod
+    def rrf(rankings: list[np.ndarray], n: int, k: int = 60) -> np.ndarray:
+        """Reciprocal-rank fusion: sum of 1/(k + rank) over the rankings a document is in."""
+        fused = np.zeros(n, dtype=np.float64)
+        for r in rankings:
+            fused[r] += 1.0 / (k + np.arange(1, len(r) + 1))
         return fused
 
-    def search(self, query: str, k: int = 10, mode: str = "hybrid", is_question: bool = True,
-               exclude_hash: str | None = None, enforce_periods: bool = True,
-               label_filter: set[int] | None = None) -> list[Hit]:
-        if mode in ("dense", "hybrid"):
-            dense = self.dense_scores(self.embed([query], is_question)[0])
-        if mode in ("bm25", "hybrid"):
-            lex = self.bm25_scores(query)
-        scores = dense if mode == "dense" else lex if mode == "bm25" else self.rrf(dense, lex)
-        scores = scores.astype(np.float64).copy()
+    def scored(self, mode: str, dense: np.ndarray | None, lex: np.ndarray | None,
+               eligible: np.ndarray | None = None, depth: int = 200) -> tuple[np.ndarray, np.ndarray]:
+        """(scores, ranked) for one retrieval mode; `ranked` marks documents with an informative score."""
+        n = len(self.texts)
+        eligible = np.ones(n, dtype=bool) if eligible is None else eligible
+        if mode == "dense":
+            return dense.astype(np.float64), eligible.copy()
+        if mode == "bm25":
+            return lex.astype(np.float64), eligible & (lex > 0)
+        fused = self.rrf([self.ranking(dense, eligible, depth), self.ranking(lex, eligible & (lex > 0), depth)], n)
+        return fused, fused > 0
 
+    def top(self, scores: np.ndarray, ranked: np.ndarray, k: int, exclude_hash: str | None = None) -> list[int]:
+        out = []
+        for i in self.ranking(scores, ranked):
+            if exclude_hash and self.hashes[i] == exclude_hash:
+                continue
+            out.append(int(i))
+            if len(out) == k:
+                break
+        return out
+
+    def eligible_mask(self, query: str, enforce_periods: bool, is_question: bool,
+                      period_match: str = "any", label_filter: set[int] | None = None) -> tuple[np.ndarray, dict]:
+        """Filters. Several durations in one query: 'any' (default) keeps clauses mentioning at
+        least one of them; 'all' keeps clauses mentioning every one of them."""
+        if period_match not in ("any", "all"):
+            raise ValueError("period_match must be 'any' or 'all'")
+        eligible = np.ones(len(self.texts), dtype=bool)
+        info = {"requested_days": None, "period_match": None}
         if enforce_periods and is_question:
             wanted = day_periods(query)
             if wanted:
-                ok = np.array([bool(wanted & p) for p in self.periods])
-                scores[~ok] = -np.inf
+                test = (lambda p: bool(wanted & p)) if period_match == "any" else (lambda p: wanted <= p)
+                eligible &= np.array([test(p) for p in self.periods])
+                info = {"requested_days": sorted(wanted), "period_match": period_match}
         if label_filter is not None:
-            scores[~np.isin(self.labels, list(label_filter))] = -np.inf
+            eligible &= np.isin(self.labels, list(label_filter))
+        info["n_eligible"] = int(eligible.sum())
+        return eligible, info
 
-        order = np.argsort(-scores)
-        hits = []
-        for i in order:
-            if not np.isfinite(scores[i]):
-                break
-            if exclude_hash and self.hashes[i] == exclude_hash:
-                continue
-            hits.append(Hit(len(hits) + 1, float(scores[i]), self.names[self.labels[i]], self.texts[i]))
-            if len(hits) == k:
-                break
-        return hits
+    def search_detailed(self, query: str, k: int = 10, mode: str = "hybrid", is_question: bool = True,
+                        exclude_hash: str | None = None, enforce_periods: bool = True,
+                        label_filter: set[int] | None = None, period_match: str = "any",
+                        depth: int = 200) -> dict:
+        if k < 1:
+            raise ValueError("k must be >= 1")
+        if mode not in ("dense", "bm25", "hybrid"):
+            raise ValueError(f"unknown mode {mode!r}")
+        eligible, info = self.eligible_mask(query, enforce_periods, is_question, period_match, label_filter)
+        dense = self.dense_scores(self.embed([query], is_question)[0]) if mode in ("dense", "hybrid") else None
+        lex = self.bm25_scores(query) if mode in ("bm25", "hybrid") else None
+        scores, ranked = self.scored(mode, dense, lex, eligible, depth)
+        ids = self.top(scores, ranked, k, exclude_hash)
+        hits = [Hit(r + 1, float(scores[i]), self.names[self.labels[i]], self.texts[i]) for r, i in enumerate(ids)]
+        return {"hits": hits, "n_returned": len(hits), "n_ranked": int(ranked.sum()), **info}
+
+    def search(self, query: str, k: int = 10, mode: str = "hybrid", is_question: bool = True,
+               exclude_hash: str | None = None, enforce_periods: bool = True,
+               label_filter: set[int] | None = None, period_match: str = "any", depth: int = 200) -> list[Hit]:
+        """Top-k hits; may return FEWER than k (never padded with unranked documents)."""
+        return self.search_detailed(query, k, mode, is_question, exclude_hash, enforce_periods,
+                                    label_filter, period_match, depth)["hits"]
 
 
 # ------------------------------------------------------- evaluation ----
@@ -300,79 +371,112 @@ def _sample_queries(n: int = 1000) -> tuple[list[str], np.ndarray]:
     return [X[i] for i in idx], y[idx]
 
 
+LABEL_APPROXIMATION = (
+    "Relevance is approximated by the LEDGAR label: a hit is 'relevant' iff its label is accepted. "
+    "This ignores whether the clause actually answers the question (e.g. the requested notice "
+    "period) and penalises correct clauses filed under a near-synonym label not listed.")
+
+
+def _precision_at(rel: np.ndarray, k: int) -> float:
+    """Fixed denominator k: missing hits count as non-relevant."""
+    return float(rel[:k].sum() / k)
+
+
 def evaluate(index: ClauseIndex) -> dict:
     names = index.names
-    out: dict = {"bank_size": len(index.texts), "embedding_model": EMBEDDING_MODEL}
+    out: dict = {"bank_size": len(index.texts), "embedding_model": EMBEDDING_MODEL,
+                 "ranking_rules": "filters first; dense ranks all eligible docs, BM25 only docs with "
+                                  "score > 0; RRF(k=60, depth=200); unranked docs never returned; "
+                                  "ties broken by bank index",
+                 "label_approximation": LABEL_APPROXIMATION}
 
     # 1) clause -> similar clauses (relevance = same clause type), duplicates excluded.
     qs, qy = _sample_queries()
     qemb = index.embed(qs, is_question=False)
-    res = {m: {"p@1": [], "p@5": [], "p@10": [], "mrr@10": []} for m in ("dense", "bm25", "hybrid")}
+    res = {m: {"p@1": [], "p@5": [], "p@10": [], "mrr@10": [], "n_returned": []}
+           for m in ("dense", "bm25", "hybrid")}
     per_label_p10 = {m: {} for m in res}
     for q, y, e in zip(qs, qy, qemb):
         dense = index.dense_scores(e)
         lex = index.bm25_scores(q)
         h = norm_hash(q)
-        for mode, s in (("dense", dense), ("bm25", lex), ("hybrid", index.rrf(dense, lex))):
-            top = np.argpartition(-s, 11)[:11]
-            top = top[np.argsort(-s[top])]
-            top = [i for i in top if index.hashes[i] != h][:10]
+        for mode in res:
+            scores, ranked = index.scored(mode, dense, lex)
+            top = index.top(scores, ranked, 10, exclude_hash=h)
             rel = index.labels[top] == y
-            res[mode]["p@1"].append(rel[0])
-            res[mode]["p@5"].append(rel[:5].mean())
-            res[mode]["p@10"].append(rel.mean())
+            res[mode]["p@1"].append(_precision_at(rel, 1))
+            res[mode]["p@5"].append(_precision_at(rel, 5))
+            res[mode]["p@10"].append(_precision_at(rel, 10))
+            res[mode]["n_returned"].append(len(top))
             first = np.where(rel)[0]
             res[mode]["mrr@10"].append(1 / (first[0] + 1) if len(first) else 0.0)
-            per_label_p10[mode].setdefault(names[y], []).append(rel.mean())
+            per_label_p10[mode].setdefault(names[y], []).append(_precision_at(rel, 10))
     out["clause_to_clause"] = {
         m: {k: float(np.mean(v)) for k, v in d.items()} | {"n_queries": len(qs)} for m, d in res.items()
     }
     worst = sorted(((k, float(np.mean(v))) for k, v in per_label_p10["hybrid"].items()), key=lambda kv: kv[1])
     out["clause_to_clause_worst_labels_hybrid_p@10"] = worst[:10]
-
     out["clause_to_clause_protocol"] = (
         "Queries: test clauses sampled per class (up to 10 per class -> 981 queries; classes with "
         "fewer test clauses contribute all of them). Bank: de-duplicated train split. A retrieved "
         "clause is relevant iff it has the same LEDGAR label as the query. Exact duplicates of the "
-        "query (normalised text) are removed from the results before scoring.")
+        "query (normalised text) are removed from the results before scoring. p@k has a fixed "
+        "denominator k.")
 
-    # 2) lawyer questions -> clause types (+ day-period constraint satisfaction).
+    # 2) lawyer questions -> clause types (+ numeric day-period constraint).
     qres, per_question = [], []
     for mode in ("dense", "bm25", "hybrid"):
         for enforce in ((False, True) if mode == "hybrid" else (False,)):
             name = mode + (" + period filter" if enforce else "")
-            p10, p1, period_ok = [], [], []
+            agg = {"p@1": [], "precision_at_10": [], "precision_among_returned": [], "n_returned": []}
+            c_at10, c_among = [], []
             for q, ok_labels in QUESTIONS:
-                hits = index.search(q, 10, mode=mode, is_question=True, enforce_periods=enforce)
-                rel = [h.label in ok_labels for h in hits]
-                p10.append(np.mean(rel) if rel else 0.0)
-                p1.append(float(rel[0]) if rel else 0.0)
+                d = index.search_detailed(q, 10, mode=mode, is_question=True, enforce_periods=enforce)
+                hits = d["hits"]
+                rel = np.array([h.label in ok_labels for h in hits], dtype=bool)
+                agg["p@1"].append(_precision_at(rel, 1))
+                agg["precision_at_10"].append(_precision_at(rel, 10))
+                agg["precision_among_returned"].append(float(rel.mean()) if len(rel) else None)
+                agg["n_returned"].append(len(hits))
                 want = day_periods(q)
-                pm = [bool(want & day_periods(h.text)) for h in hits] if want else None
+                mention = np.array([bool(want & day_periods(h.text)) for h in hits], dtype=bool) if want else None
                 if want:
-                    period_ok.append(np.mean(pm) if pm else 0.0)
+                    c_at10.append(_precision_at(mention, 10))
+                    c_among.append(float(mention.mean()) if len(mention) else None)
                 per_question.append({
-                    "mode": name, "question": q, "accepted_labels": ok_labels, "n_hits": len(hits),
-                    "p@1": p1[-1], "p@10": p10[-1],
+                    "mode": name, "question": q, "accepted_labels": ok_labels,
+                    "n_returned": len(hits), "n_eligible": d["n_eligible"], "n_ranked": d["n_ranked"],
+                    "p@1": agg["p@1"][-1], "precision_at_10": agg["precision_at_10"][-1],
+                    "precision_among_returned": agg["precision_among_returned"][-1],
                     "requested_days": sorted(want) if want else None,
-                    "hits": [{"rank": h.rank, "label": h.label, "relevant": r,
-                              "mentions_requested_days": (pm[j] if pm else None),
+                    "period_match": d["period_match"],
+                    "mention_rate_at_10": (c_at10[-1] if want else None),
+                    "hits": [{"rank": h.rank, "label": h.label, "relevant_by_label": bool(r),
+                              "mentions_requested_days": (bool(mention[j]) if want else None),
                               "text": h.text[:240]} for j, (h, r) in enumerate(zip(hits, rel))],
                 })
-            qres.append({"mode": name, "p@1": float(np.mean(p1)), "p@10": float(np.mean(p10)),
-                         "period_match@10 (constraint questions)": float(np.mean(period_ok)),
-                         "n_constraint_questions": len(period_ok)})
+            among = [x for x in agg["precision_among_returned"] if x is not None]
+            qres.append({
+                "mode": name, "p@1": float(np.mean(agg["p@1"])),
+                "precision_at_10": float(np.mean(agg["precision_at_10"])),
+                "precision_among_returned": float(np.mean(among)) if among else None,
+                "mean_n_returned": float(np.mean(agg["n_returned"])),
+                "n_questions_with_fewer_than_10": int(sum(n < 10 for n in agg["n_returned"])),
+                "duration_mention_rate_at_10": float(np.mean(c_at10)),
+                "duration_mention_rate_among_returned": float(np.mean([x for x in c_among if x is not None])),
+                "n_constraint_questions": len(c_at10)})
     out["questions"] = qres
     out["n_questions"] = len(QUESTIONS)
     out["questions_protocol"] = (
-        "40 hand-written questions (fixed before results), hybrid/dense/BM25 top-10. Relevant iff the "
-        "hit's LEDGAR label is in the accepted list for that question. p@10 is computed over the hits "
-        "returned (fewer than 10 if the period filter leaves fewer). period_match@10 = share of hits "
-        "that MENTION the requested number of days, whatever its legal role.")
+        "40 hand-written questions, fixed before any result was seen and unchanged since (so a "
+        "re-run is a non-regression check, not an independent validation). Top-10 per mode. "
+        "precision_at_10 divides by 10 (missing hits count as misses); precision_among_returned "
+        "divides by the number of hits returned. duration_mention_rate = share of hits that MENTION "
+        "the requested number of days, whatever its legal role: it does not validate a notice "
+        "period. " + LABEL_APPROXIMATION)
     save_json({"protocol": out["questions_protocol"], "results": per_question},
               REPORTS / "retrieval_questions.json")
 
-    # Show the headline example in the report.
     demo = QUESTIONS[1][0]
     out["example"] = {"query": demo, "hits": [
         {"label": h.label, "text": h.text[:300]} for h in index.search(demo, 5)]}
@@ -390,21 +494,32 @@ def cli_index():
 def cli_search(argv=None):
     import argparse
 
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="nlp-final-project search",
+                                description="Search the clause bank (LEDGAR train clauses).")
     p.add_argument("query")
-    p.add_argument("-k", type=int, default=5)
+    p.add_argument("-k", type=int, default=5, help="maximum number of results (1-100)")
     p.add_argument("--mode", default="hybrid", choices=["dense", "bm25", "hybrid"])
     p.add_argument("--clause", action="store_true", help="query is a pasted clause, not a question")
+    p.add_argument("--period-match", choices=["any", "all"], default="any",
+                   help="query with several durations: keep clauses mentioning any / all of them")
+    p.add_argument("--no-period-filter", action="store_true", help="do not filter on 'N days'")
     a = p.parse_args(argv)
-    hits = ClauseIndex.load().search(a.query, a.k, a.mode, is_question=not a.clause)
-    wanted = day_periods(a.query) if not a.clause else set()
-    if wanted:
-        print(f"(period filter: only clauses mentioning {sorted(wanted)} day(s); the role of the "
-              f"duration is not checked)\n")
-    if not hits:
-        print("no clause in the bank matches this query" + (" and its period filter" if wanted else ""))
-    for h in hits:
-        print(f"[{h.rank}] {h.label}  (score {h.score:.3f})\n    {h.text[:400]}\n")
+    if not 1 <= a.k <= 100:
+        p.error("-k must be between 1 and 100")
+    if not a.query.strip():
+        p.error("empty query")
+    d = ClauseIndex.load().search_detailed(a.query, a.k, a.mode, is_question=not a.clause,
+                                           enforce_periods=not a.no_period_filter, period_match=a.period_match)
+    if d["requested_days"]:
+        print(f"(period filter: clauses mentioning {d['period_match']} of {d['requested_days']} day(s); "
+              f"{d['n_eligible']} eligible. Mentioning a duration does not mean it is the requested "
+              f"notice period: the role of the duration is not checked)\n")
+    if not d["hits"]:
+        print("no clause in the bank matches this query" + (" and its period filter" if d["requested_days"] else ""))
+    elif d["n_returned"] < a.k:
+        print(f"(only {d['n_returned']} ranked result(s); unranked clauses are not shown)\n")
+    for h in d["hits"]:
+        print(f"[{h.rank}] {h.label}  (score {h.score:.4f})\n    {h.text[:400]}\n")
 
 
 if __name__ == "__main__":

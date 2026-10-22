@@ -1,0 +1,1713 @@
+{
+  "primary_variant": "ensemble",
+  "thresholds_used": {
+    "ensemble": 0.708863824720781,
+    "bert": 0.8508285284042358,
+    "tfidf": 0.7561507298557084
+  },
+  "caveats": [
+    "Groups are keyword proxies inferred from clause text (slices.py), not metadata, not certified personal attributes; a clause can be mis-assigned.",
+    "Groups with n < 100 have wide intervals; no conclusion on fairness or discrimination can be drawn from them.",
+    "The mix-adjusted gap compares a group with the accuracy its clause-type mix would predict; it is descriptive, not causal.",
+    "Counterfactual edits test stability of the clause TYPE; jurisdiction and currency edits change the legal content, so a stable type does not imply an equivalent clause."
+  ],
+  "slice_definitions": {
+    "contract_family_keywords": {
+      "employment": [
+        "\\bemployee",
+        "\\bexecutive\\b",
+        "\\bemployment\\b",
+        "\\bsalary\\b",
+        "\\bseverance\\b",
+        "\\bemployer\\b",
+        "\\bbonus\\b"
+      ],
+      "credit_finance": [
+        "\\bborrower",
+        "\\blender",
+        "\\bloans?\\b",
+        "\\bcredit agreement\\b",
+        "\\badministrative agent\\b",
+        "\\bindenture\\b",
+        "\\bdebenture\\b",
+        "\\bnoteholder",
+        "\\bcollateral\\b",
+        "\\bguarant"
+      ],
+      "real_estate": [
+        "\\blandlord\\b",
+        "\\btenant\\b",
+        "\\blease\\b",
+        "\\bpremises\\b",
+        "\\blessee\\b",
+        "\\blessor\\b"
+      ],
+      "m&a_securities": [
+        "\\bmerger\\b",
+        "\\bpurchaser\\b",
+        "\\bstockholder",
+        "\\bshareholder",
+        "\\bacquir",
+        "\\bunderwriter",
+        "\\bsubscriber\\b",
+        "\\bwarrant\\b"
+      ],
+      "commercial_ip": [
+        "\\blicensor\\b",
+        "\\blicensee\\b",
+        "\\bsupplier\\b",
+        "\\bcustomer\\b",
+        "\\bdistributor\\b",
+        "\\bsoftware\\b",
+        "\\bintellectual property\\b",
+        "\\bvendor\\b",
+        "\\bservices?\\b"
+      ]
+    },
+    "class_frequency": "terciles of training count (head/torso/tail)",
+    "pronouns": "he/him/his/himself vs she/her/hers/herself in the clause",
+    "jurisdiction": "US state or non-US place named in the clause"
+  },
+  "slices": {
+    "contract_family": [
+      {
+        "group": "commercial_ip",
+        "n": 357,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8599439775910365,
+          "accuracy_95ci": [
+            0.8200991700983132,
+            0.8921246976597282
+          ],
+          "expected_from_clause_type_mix": 0.8890010703493615,
+          "mix_adjusted_gap_points": -2.905709275832502,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7955182072829131,
+          "correct_rate_among_handled": 0.9507042253521126,
+          "n_handled": 284
+        },
+        "bert": {
+          "accuracy": 0.8123249299719888,
+          "accuracy_95ci": [
+            0.7685757696892743,
+            0.849423928793384
+          ],
+          "expected_from_clause_type_mix": 0.8619801473795912,
+          "mix_adjusted_gap_points": -4.965521740760237,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.7563025210084033,
+          "correct_rate_among_handled": 0.9481481481481482,
+          "n_handled": 270
+        },
+        "tfidf": {
+          "accuracy": 0.8543417366946778,
+          "accuracy_95ci": [
+            0.813976063945657,
+            0.8871626074270449
+          ],
+          "expected_from_clause_type_mix": 0.882672123114688,
+          "mix_adjusted_gap_points": -2.833038642001018,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7871148459383753,
+          "correct_rate_among_handled": 0.9466192170818505,
+          "n_handled": 281
+        }
+      },
+      {
+        "group": "credit_finance",
+        "n": 2285,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.9107221006564551,
+          "accuracy_95ci": [
+            0.8983305308698184,
+            0.9217349555316869
+          ],
+          "expected_from_clause_type_mix": 0.8738883218738739,
+          "mix_adjusted_gap_points": 3.6833778782581206,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.863019693654267,
+          "correct_rate_among_handled": 0.9619675456389453,
+          "n_handled": 1972
+        },
+        "bert": {
+          "accuracy": 0.8844638949671773,
+          "accuracy_95ci": [
+            0.8707064667312966,
+            0.8969307520259998
+          ],
+          "expected_from_clause_type_mix": 0.8485173169798648,
+          "mix_adjusted_gap_points": 3.594657798731249,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7724288840262582,
+          "correct_rate_among_handled": 0.9603399433427762,
+          "n_handled": 1765
+        },
+        "tfidf": {
+          "accuracy": 0.9080962800875274,
+          "accuracy_95ci": [
+            0.8955561873858661,
+            0.9192664722512186
+          ],
+          "expected_from_clause_type_mix": 0.8678767730658973,
+          "mix_adjusted_gap_points": 4.0219507021630125,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8568927789934354,
+          "correct_rate_among_handled": 0.9642492339121552,
+          "n_handled": 1958
+        }
+      },
+      {
+        "group": "employment",
+        "n": 1936,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8662190082644629,
+          "accuracy_95ci": [
+            0.8503274083358608,
+            0.8806601114698801
+          ],
+          "expected_from_clause_type_mix": 0.8768233766370866,
+          "mix_adjusted_gap_points": -1.0604368372623796,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7954545454545454,
+          "correct_rate_among_handled": 0.9474025974025974,
+          "n_handled": 1540
+        },
+        "bert": {
+          "accuracy": 0.8455578512396694,
+          "accuracy_95ci": [
+            0.8287774300177032,
+            0.8609696091219873
+          ],
+          "expected_from_clause_type_mix": 0.863017755306718,
+          "mix_adjusted_gap_points": -1.745990406704856,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.7283057851239669,
+          "correct_rate_among_handled": 0.9453900709219858,
+          "n_handled": 1410
+        },
+        "tfidf": {
+          "accuracy": 0.8543388429752066,
+          "accuracy_95ci": [
+            0.8379228835048066,
+            0.8693513599179553
+          ],
+          "expected_from_clause_type_mix": 0.8661853421750086,
+          "mix_adjusted_gap_points": -1.1846499199802074,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7928719008264463,
+          "correct_rate_among_handled": 0.9381107491856677,
+          "n_handled": 1535
+        }
+      },
+      {
+        "group": "generic",
+        "n": 4613,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8853240841101235,
+          "accuracy_95ci": [
+            0.8758067008619951,
+            0.894200223352169
+          ],
+          "expected_from_clause_type_mix": 0.8958396608670262,
+          "mix_adjusted_gap_points": -1.0515576756902623,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.8614784305224366,
+          "correct_rate_among_handled": 0.9378459989934574,
+          "n_handled": 3974
+        },
+        "bert": {
+          "accuracy": 0.8707999132885325,
+          "accuracy_95ci": [
+            0.8608109416101967,
+            0.8801718116209302
+          ],
+          "expected_from_clause_type_mix": 0.875851531138417,
+          "mix_adjusted_gap_points": -0.5051617849884504,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7819206590071537,
+          "correct_rate_among_handled": 0.9445522594954255,
+          "n_handled": 3607
+        },
+        "tfidf": {
+          "accuracy": 0.8786039453717754,
+          "accuracy_95ci": [
+            0.8688629650271014,
+            0.887714865150135
+          ],
+          "expected_from_clause_type_mix": 0.8893173355035747,
+          "mix_adjusted_gap_points": -1.0713390131799283,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.8480381530457403,
+          "correct_rate_among_handled": 0.9414621676891616,
+          "n_handled": 3912
+        }
+      },
+      {
+        "group": "m&a_securities",
+        "n": 543,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.9097605893186004,
+          "accuracy_95ci": [
+            0.8826948432207842,
+            0.9310691425476723
+          ],
+          "expected_from_clause_type_mix": 0.8736653373472043,
+          "mix_adjusted_gap_points": 3.609525197139607,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8397790055248618,
+          "correct_rate_among_handled": 0.9539473684210527,
+          "n_handled": 456
+        },
+        "bert": {
+          "accuracy": 0.8766114180478821,
+          "accuracy_95ci": [
+            0.8462734906319029,
+            0.9016579030294425
+          ],
+          "expected_from_clause_type_mix": 0.8504009289702773,
+          "mix_adjusted_gap_points": 2.6210489077604815,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7808471454880295,
+          "correct_rate_among_handled": 0.9504716981132075,
+          "n_handled": 424
+        },
+        "tfidf": {
+          "accuracy": 0.8968692449355433,
+          "accuracy_95ci": [
+            0.8684383659501,
+            0.9197240562211466
+          ],
+          "expected_from_clause_type_mix": 0.8645579728227691,
+          "mix_adjusted_gap_points": 3.231127211277418,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8268876611418048,
+          "correct_rate_among_handled": 0.9576837416481069,
+          "n_handled": 449
+        }
+      },
+      {
+        "group": "real_estate",
+        "n": 266,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.7518796992481203,
+          "accuracy_95ci": [
+            0.6966336561279813,
+            0.7999539715765682
+          ],
+          "expected_from_clause_type_mix": 0.843432749905837,
+          "mix_adjusted_gap_points": -9.15530506577168,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.7293233082706767,
+          "correct_rate_among_handled": 0.8762886597938144,
+          "n_handled": 194
+        },
+        "bert": {
+          "accuracy": 0.7293233082706767,
+          "accuracy_95ci": [
+            0.6729445388576957,
+            0.779172555022566
+          ],
+          "expected_from_clause_type_mix": 0.8102925798507915,
+          "mix_adjusted_gap_points": -8.09692715801148,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.6052631578947368,
+          "correct_rate_among_handled": 0.9192546583850931,
+          "n_handled": 161
+        },
+        "tfidf": {
+          "accuracy": 0.7368421052631579,
+          "accuracy_95ci": [
+            0.6808213779558151,
+            0.7861192271992091
+          ],
+          "expected_from_clause_type_mix": 0.8382592301537971,
+          "mix_adjusted_gap_points": -10.141712489063925,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.6992481203007519,
+          "correct_rate_among_handled": 0.8817204301075269,
+          "n_handled": 186
+        }
+      }
+    ],
+    "pronouns": [
+      {
+        "group": "both (he/she)",
+        "n": 143,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.7972027972027972,
+          "accuracy_95ci": [
+            0.7239294161695328,
+            0.8549256221847211
+          ],
+          "expected_from_clause_type_mix": 0.8418247260040098,
+          "mix_adjusted_gap_points": -4.462192880121263,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7132867132867133,
+          "correct_rate_among_handled": 0.9019607843137255,
+          "n_handled": 102
+        },
+        "bert": {
+          "accuracy": 0.7342657342657343,
+          "accuracy_95ci": [
+            0.6564279437044778,
+            0.7998460277041695
+          ],
+          "expected_from_clause_type_mix": 0.8092296861173466,
+          "mix_adjusted_gap_points": -7.496395185161231,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.6433566433566433,
+          "correct_rate_among_handled": 0.9021739130434783,
+          "n_handled": 92
+        },
+        "tfidf": {
+          "accuracy": 0.7832167832167832,
+          "accuracy_95ci": [
+            0.708749079926142,
+            0.8428657213290882
+          ],
+          "expected_from_clause_type_mix": 0.8332284823316588,
+          "mix_adjusted_gap_points": -5.001169911487557,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7342657342657343,
+          "correct_rate_among_handled": 0.8857142857142857,
+          "n_handled": 105
+        }
+      },
+      {
+        "group": "female",
+        "n": 37,
+        "small_group": true,
+        "ensemble": {
+          "accuracy": 0.8648648648648649,
+          "accuracy_95ci": [
+            0.7202227252929444,
+            0.9408679273749238
+          ],
+          "expected_from_clause_type_mix": 0.8495367114943139,
+          "mix_adjusted_gap_points": 1.5328153370551045,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7567567567567568,
+          "correct_rate_among_handled": 0.9285714285714286,
+          "n_handled": 28
+        },
+        "bert": {
+          "accuracy": 0.7837837837837838,
+          "accuracy_95ci": [
+            0.628045387261231,
+            0.8861362314804442
+          ],
+          "expected_from_clause_type_mix": 0.8399632385826006,
+          "mix_adjusted_gap_points": -5.617945479881681,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.5945945945945946,
+          "correct_rate_among_handled": 0.9090909090909091,
+          "n_handled": 22
+        },
+        "tfidf": {
+          "accuracy": 0.8648648648648649,
+          "accuracy_95ci": [
+            0.7202227252929444,
+            0.9408679273749238
+          ],
+          "expected_from_clause_type_mix": 0.8358435018312438,
+          "mix_adjusted_gap_points": 2.902136303362113,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8108108108108109,
+          "correct_rate_among_handled": 0.9,
+          "n_handled": 30
+        }
+      },
+      {
+        "group": "male",
+        "n": 299,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8361204013377926,
+          "accuracy_95ci": [
+            0.7899479216289056,
+            0.8737653859219725
+          ],
+          "expected_from_clause_type_mix": 0.8696113843654806,
+          "mix_adjusted_gap_points": -3.3490983027687937,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7692307692307693,
+          "correct_rate_among_handled": 0.9478260869565217,
+          "n_handled": 230
+        },
+        "bert": {
+          "accuracy": 0.8361204013377926,
+          "accuracy_95ci": [
+            0.7899479216289056,
+            0.8737653859219725
+          ],
+          "expected_from_clause_type_mix": 0.8565365624848699,
+          "mix_adjusted_gap_points": -2.0416161147077228,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7090301003344481,
+          "correct_rate_among_handled": 0.9433962264150944,
+          "n_handled": 212
+        },
+        "tfidf": {
+          "accuracy": 0.8294314381270903,
+          "accuracy_95ci": [
+            0.7826837968150459,
+            0.8678212857099442
+          ],
+          "expected_from_clause_type_mix": 0.8596861630971898,
+          "mix_adjusted_gap_points": -3.025472497009951,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7625418060200669,
+          "correct_rate_among_handled": 0.9429824561403509,
+          "n_handled": 228
+        }
+      },
+      {
+        "group": "none",
+        "n": 9521,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8871967230332948,
+          "accuracy_95ci": [
+            0.8806853579230014,
+            0.8933957564547956
+          ],
+          "expected_from_clause_type_mix": 0.8855343348315154,
+          "mix_adjusted_gap_points": 0.166238820177933,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8465497321709904,
+          "correct_rate_among_handled": 0.9456575682382135,
+          "n_handled": 8060
+        },
+        "bert": {
+          "accuracy": 0.8666106501417918,
+          "accuracy_95ci": [
+            0.8596330878289026,
+            0.8732924864924593
+          ],
+          "expected_from_clause_type_mix": 0.8646252581529973,
+          "mix_adjusted_gap_points": 0.19853919887945493,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7678815250498897,
+          "correct_rate_among_handled": 0.9491177677472302,
+          "n_handled": 7311
+        },
+        "tfidf": {
+          "accuracy": 0.8799495851276127,
+          "accuracy_95ci": [
+            0.8732671783366031,
+            0.8863255061233675
+          ],
+          "expected_from_clause_type_mix": 0.8783610917648101,
+          "mix_adjusted_gap_points": 0.15884933628025344,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8358365717886777,
+          "correct_rate_among_handled": 0.94697160090475,
+          "n_handled": 7958
+        }
+      }
+    ],
+    "jurisdiction": [
+      {
+        "group": "US state mentioned",
+        "n": 1012,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8656126482213439,
+          "accuracy_95ci": [
+            0.8432103554519966,
+            0.8852496721743578
+          ],
+          "expected_from_clause_type_mix": 0.865097804982177,
+          "mix_adjusted_gap_points": 0.051484323916684005,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8369565217391305,
+          "correct_rate_among_handled": 0.9232585596221959,
+          "n_handled": 847
+        },
+        "bert": {
+          "accuracy": 0.8537549407114624,
+          "accuracy_95ci": [
+            0.8306464785320276,
+            0.8741878184686072
+          ],
+          "expected_from_clause_type_mix": 0.8484447654901836,
+          "mix_adjusted_gap_points": 0.5310175221278857,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7964426877470355,
+          "correct_rate_among_handled": 0.9181141439205955,
+          "n_handled": 806
+        },
+        "tfidf": {
+          "accuracy": 0.8606719367588933,
+          "accuracy_95ci": [
+            0.8379691768480713,
+            0.8806467963508999
+          ],
+          "expected_from_clause_type_mix": 0.859533682649888,
+          "mix_adjusted_gap_points": 0.11382541090052545,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8241106719367589,
+          "correct_rate_among_handled": 0.9244604316546763,
+          "n_handled": 834
+        }
+      },
+      {
+        "group": "non-US mentioned",
+        "n": 36,
+        "small_group": true,
+        "ensemble": {
+          "accuracy": 0.9166666666666666,
+          "accuracy_95ci": [
+            0.7817298972308114,
+            0.9712519107287082
+          ],
+          "expected_from_clause_type_mix": 0.8921024177521749,
+          "mix_adjusted_gap_points": 2.4564248914491715,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8333333333333334,
+          "correct_rate_among_handled": 0.9666666666666667,
+          "n_handled": 30
+        },
+        "bert": {
+          "accuracy": 0.9166666666666666,
+          "accuracy_95ci": [
+            0.7817298972308114,
+            0.9712519107287082
+          ],
+          "expected_from_clause_type_mix": 0.8936944715601042,
+          "mix_adjusted_gap_points": 2.2972195106562454,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8611111111111112,
+          "correct_rate_among_handled": 0.9354838709677419,
+          "n_handled": 31
+        },
+        "tfidf": {
+          "accuracy": 0.8888888888888888,
+          "accuracy_95ci": [
+            0.7468487098496367,
+            0.9559343109125816
+          ],
+          "expected_from_clause_type_mix": 0.8854953683267398,
+          "mix_adjusted_gap_points": 0.3393520562149033,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8611111111111112,
+          "correct_rate_among_handled": 0.9354838709677419,
+          "n_handled": 31
+        }
+      },
+      {
+        "group": "none",
+        "n": 8952,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8862823949955317,
+          "accuracy_95ci": [
+            0.8795395056820047,
+            0.8926938933544412
+          ],
+          "expected_from_clause_type_mix": 0.8864393805092671,
+          "mix_adjusted_gap_points": -0.015698551373533043,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8426050044682752,
+          "correct_rate_among_handled": 0.9475009942993504,
+          "n_handled": 7543
+        },
+        "bert": {
+          "accuracy": 0.8643878462913316,
+          "accuracy_95ci": [
+            0.8571388360525086,
+            0.871324248868511
+          ],
+          "expected_from_clause_type_mix": 0.8650805290826374,
+          "mix_adjusted_gap_points": -0.06926827913058542,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7596067917783735,
+          "correct_rate_among_handled": 0.9519117647058823,
+          "n_handled": 6800
+        },
+        "tfidf": {
+          "accuracy": 0.8787980339588919,
+          "accuracy_95ci": [
+            0.8718742881473768,
+            0.8853968096353263
+          ],
+          "expected_from_clause_type_mix": 0.8789403574506871,
+          "mix_adjusted_gap_points": -0.014232349179521542,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8328865058087578,
+          "correct_rate_among_handled": 0.9483637339055794,
+          "n_handled": 7456
+        }
+      }
+    ],
+    "length": [
+      {
+        "group": "a) <=30 words",
+        "n": 1349,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8628613787991104,
+          "accuracy_95ci": [
+            0.8434711746175,
+            0.8801907825547218
+          ],
+          "expected_from_clause_type_mix": 0.8834786545352393,
+          "mix_adjusted_gap_points": -2.0617275736128926,
+          "below_mix_expectation_beyond_95ci": true,
+          "coverage": 0.816160118606375,
+          "correct_rate_among_handled": 0.932788374205268,
+          "n_handled": 1101
+        },
+        "bert": {
+          "accuracy": 0.85470719051149,
+          "accuracy_95ci": [
+            0.83489434608868,
+            0.8725055446302337
+          ],
+          "expected_from_clause_type_mix": 0.8652480638506774,
+          "mix_adjusted_gap_points": -1.0540873339187407,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7309117865085248,
+          "correct_rate_among_handled": 0.9421906693711968,
+          "n_handled": 986
+        },
+        "tfidf": {
+          "accuracy": 0.860637509266123,
+          "accuracy_95ci": [
+            0.8411299629446213,
+            0.8780968851948802
+          ],
+          "expected_from_clause_type_mix": 0.8763587275393746,
+          "mix_adjusted_gap_points": -1.572121827325157,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8028169014084507,
+          "correct_rate_among_handled": 0.9344413665743305,
+          "n_handled": 1083
+        }
+      },
+      {
+        "group": "b) 31-80",
+        "n": 3798,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8904686677198526,
+          "accuracy_95ci": [
+            0.8801388314964242,
+            0.9000093998238916
+          ],
+          "expected_from_clause_type_mix": 0.8930628666028173,
+          "mix_adjusted_gap_points": -0.2594198882964749,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8515007898894155,
+          "correct_rate_among_handled": 0.9505256648113791,
+          "n_handled": 3234
+        },
+        "bert": {
+          "accuracy": 0.8765139547130069,
+          "accuracy_95ci": [
+            0.8656686146526317,
+            0.8865983919475381
+          ],
+          "expected_from_clause_type_mix": 0.8789073696850764,
+          "mix_adjusted_gap_points": -0.2393414972069574,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7909426013691416,
+          "correct_rate_among_handled": 0.9500665778961385,
+          "n_handled": 3004
+        },
+        "tfidf": {
+          "accuracy": 0.8799368088467614,
+          "accuracy_95ci": [
+            0.8692136415469355,
+            0.8898921560223266
+          ],
+          "expected_from_clause_type_mix": 0.8859357475248034,
+          "mix_adjusted_gap_points": -0.5998938678042021,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8346498156924698,
+          "correct_rate_among_handled": 0.9529968454258675,
+          "n_handled": 3170
+        }
+      },
+      {
+        "group": "c) 81-200",
+        "n": 3555,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8779184247538678,
+          "accuracy_95ci": [
+            0.8667466699522373,
+            0.8882742896768736
+          ],
+          "expected_from_clause_type_mix": 0.8780604240393769,
+          "mix_adjusted_gap_points": -0.01419992855090646,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8360056258790436,
+          "correct_rate_among_handled": 0.9390982503364738,
+          "n_handled": 2972
+        },
+        "bert": {
+          "accuracy": 0.8526019690576653,
+          "accuracy_95ci": [
+            0.8405679556462826,
+            0.8638747484066318
+          ],
+          "expected_from_clause_type_mix": 0.8538128362553425,
+          "mix_adjusted_gap_points": -0.12108671976772678,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7473980309423347,
+          "correct_rate_among_handled": 0.9442980805419646,
+          "n_handled": 2657
+        },
+        "tfidf": {
+          "accuracy": 0.870604781997187,
+          "accuracy_95ci": [
+            0.8591701220646124,
+            0.8812393415091528
+          ],
+          "expected_from_clause_type_mix": 0.8703939198366867,
+          "mix_adjusted_gap_points": 0.02108621605003691,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8329113924050633,
+          "correct_rate_among_handled": 0.9375211077338736,
+          "n_handled": 2961
+        }
+      },
+      {
+        "group": "d) >200 words",
+        "n": 1298,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.9060092449922958,
+          "accuracy_95ci": [
+            0.8889138761862809,
+            0.920708431166626
+          ],
+          "expected_from_clause_type_mix": 0.8766022497800285,
+          "mix_adjusted_gap_points": 2.9406995212267306,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8574730354391371,
+          "correct_rate_among_handled": 0.9577717879604672,
+          "n_handled": 1113
+        },
+        "bert": {
+          "accuracy": 0.864406779661017,
+          "accuracy_95ci": [
+            0.8447028691769034,
+            0.8819600366635614
+          ],
+          "expected_from_clause_type_mix": 0.8431321563280232,
+          "mix_adjusted_gap_points": 2.127462333299379,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7627118644067796,
+          "correct_rate_among_handled": 0.9595959595959596,
+          "n_handled": 990
+        },
+        "tfidf": {
+          "accuracy": 0.9029275808936826,
+          "accuracy_95ci": [
+            0.8856122715036837,
+            0.9178648949964497
+          ],
+          "expected_from_clause_type_mix": 0.8696130373118336,
+          "mix_adjusted_gap_points": 3.3314543581849043,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8528505392912172,
+          "correct_rate_among_handled": 0.959349593495935,
+          "n_handled": 1107
+        }
+      }
+    ],
+    "class_frequency": [
+      {
+        "group": "head",
+        "n": 6350,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.9330708661417323,
+          "accuracy_95ci": [
+            0.9266587208027623,
+            0.9389593330058186
+          ],
+          "expected_from_clause_type_mix": 0.9330708661417323,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8938582677165354,
+          "correct_rate_among_handled": 0.9758632840028189,
+          "n_handled": 5676
+        },
+        "bert": {
+          "accuracy": 0.9266141732283465,
+          "accuracy_95ci": [
+            0.9199390529094159,
+            0.9327734226423826
+          ],
+          "expected_from_clause_type_mix": 0.9266141732283465,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8749606299212599,
+          "correct_rate_among_handled": 0.9748020158387329,
+          "n_handled": 5556
+        },
+        "tfidf": {
+          "accuracy": 0.927244094488189,
+          "accuracy_95ci": [
+            0.9205939662079942,
+            0.9333775901493441
+          ],
+          "expected_from_clause_type_mix": 0.927244094488189,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.8836220472440944,
+          "correct_rate_among_handled": 0.9755836749242559,
+          "n_handled": 5611
+        }
+      },
+      {
+        "group": "tail",
+        "n": 1283,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.7521434138737334,
+          "accuracy_95ci": [
+            0.727787809159861,
+            0.7749935743453039
+          ],
+          "expected_from_clause_type_mix": 0.7521434138737334,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.720966484801247,
+          "correct_rate_among_handled": 0.8432432432432433,
+          "n_handled": 925
+        },
+        "bert": {
+          "accuracy": 0.7022603273577552,
+          "accuracy_95ci": [
+            0.6766652846116762,
+            0.7266477571799476
+          ],
+          "expected_from_clause_type_mix": 0.7022603273577552,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.5985970381917382,
+          "correct_rate_among_handled": 0.8450520833333334,
+          "n_handled": 768
+        },
+        "tfidf": {
+          "accuracy": 0.7427903351519876,
+          "accuracy_95ci": [
+            0.7181725609265939,
+            0.7659585085072822
+          ],
+          "expected_from_clause_type_mix": 0.7427903351519876,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7131722525331254,
+          "correct_rate_among_handled": 0.8513661202185793,
+          "n_handled": 915
+        }
+      },
+      {
+        "group": "torso",
+        "n": 2367,
+        "small_group": false,
+        "ensemble": {
+          "accuracy": 0.8250950570342205,
+          "accuracy_95ci": [
+            0.8092674452124016,
+            0.8398691314361606
+          ],
+          "expected_from_clause_type_mix": 0.8250950570342205,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7684833122095479,
+          "correct_rate_among_handled": 0.9010445299615173,
+          "n_handled": 1819
+        },
+        "bert": {
+          "accuracy": 0.7815800591465991,
+          "accuracy_95ci": [
+            0.7644858032669157,
+            0.7977617969101691
+          ],
+          "expected_from_clause_type_mix": 0.7815800591465991,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.554710604140262,
+          "correct_rate_among_handled": 0.8964204112718964,
+          "n_handled": 1313
+        },
+        "tfidf": {
+          "accuracy": 0.8149556400506971,
+          "accuracy_95ci": [
+            0.7988051463258297,
+            0.8300854552225825
+          ],
+          "expected_from_clause_type_mix": 0.8149556400506971,
+          "mix_adjusted_gap_points": 0.0,
+          "below_mix_expectation_beyond_95ci": false,
+          "coverage": 0.7583438952260245,
+          "correct_rate_among_handled": 0.9013927576601671,
+          "n_handled": 1795
+        }
+      }
+    ]
+  },
+  "counterfactuals": [
+    {
+      "perturbation": "gender swap (he<->she)",
+      "meaning": "type should not change; content unchanged apart from gender",
+      "n": 487,
+      "ensemble": {
+        "type_flip_rate": 0.022587268993839837,
+        "type_flip_rate_95ci": [
+          0.012658153840007864,
+          0.03998938051730823
+        ],
+        "n_flips": 11,
+        "accuracy_before": 0.8275154004106776,
+        "accuracy_after": 0.8316221765913757,
+        "abstention_decision_changed_rate": 0.030800821355236138,
+        "mean_abs_change_true_label_score": 0.013709141140999422
+      },
+      "bert": {
+        "type_flip_rate": 0.004106776180698152,
+        "type_flip_rate_95ci": [
+          0.0011269259588193078,
+          0.014848900051038049
+        ],
+        "n_flips": 2,
+        "accuracy_before": 0.8008213552361396,
+        "accuracy_after": 0.8028747433264887,
+        "abstention_decision_changed_rate": 0.004106776180698152,
+        "mean_abs_change_true_label_score": 0.0025582618545740843
+      },
+      "tfidf": {
+        "type_flip_rate": 0.014373716632443531,
+        "type_flip_rate_95ci": [
+          0.006979603946806969,
+          0.02936939336719413
+        ],
+        "n_flips": 7,
+        "accuracy_before": 0.8193018480492813,
+        "accuracy_after": 0.8213552361396304,
+        "abstention_decision_changed_rate": 0.043121149897330596,
+        "mean_abs_change_true_label_score": 0.01695128869671484
+      }
+    },
+    {
+      "perturbation": "US state -> European jurisdiction",
+      "meaning": "type should not change; LEGAL EFFECT DOES change",
+      "n": 698,
+      "ensemble": {
+        "type_flip_rate": 0.03581661891117478,
+        "type_flip_rate_95ci": [
+          0.024375972155230744,
+          0.05233877373614988
+        ],
+        "n_flips": 25,
+        "accuracy_before": 0.8782234957020058,
+        "accuracy_after": 0.8810888252148997,
+        "abstention_decision_changed_rate": 0.044412607449856735,
+        "mean_abs_change_true_label_score": 0.028980183318536627
+      },
+      "bert": {
+        "type_flip_rate": 0.0028653295128939827,
+        "type_flip_rate_95ci": [
+          0.0007861122489623302,
+          0.01038677918409037
+        ],
+        "n_flips": 2,
+        "accuracy_before": 0.8739255014326648,
+        "accuracy_after": 0.8710601719197708,
+        "abstention_decision_changed_rate": 0.02005730659025788,
+        "mean_abs_change_true_label_score": 0.0037000069860368967
+      },
+      "tfidf": {
+        "type_flip_rate": 0.045845272206303724,
+        "type_flip_rate_95ci": [
+          0.032659061930807656,
+          0.06400320488267276
+        ],
+        "n_flips": 32,
+        "accuracy_before": 0.8739255014326648,
+        "accuracy_after": 0.8681948424068768,
+        "abstention_decision_changed_rate": 0.05873925501432665,
+        "mean_abs_change_true_label_score": 0.03597947188596586
+      }
+    },
+    {
+      "perturbation": "$ -> EUR",
+      "meaning": "type should not change; economic/legal content changes",
+      "n": 365,
+      "ensemble": {
+        "type_flip_rate": 0.0,
+        "type_flip_rate_95ci": [
+          0.0,
+          0.010415311071202379
+        ],
+        "n_flips": 0,
+        "accuracy_before": 0.9315068493150684,
+        "accuracy_after": 0.9315068493150684,
+        "abstention_decision_changed_rate": 0.005479452054794521,
+        "mean_abs_change_true_label_score": 0.004043515191633974
+      },
+      "bert": {
+        "type_flip_rate": 0.0,
+        "type_flip_rate_95ci": [
+          0.0,
+          0.010415311071202379
+        ],
+        "n_flips": 0,
+        "accuracy_before": 0.9342465753424658,
+        "accuracy_after": 0.9342465753424658,
+        "abstention_decision_changed_rate": 0.00821917808219178,
+        "mean_abs_change_true_label_score": 0.0018384922295808792
+      },
+      "tfidf": {
+        "type_flip_rate": 0.0027397260273972603,
+        "type_flip_rate_95ci": [
+          0.0004837802929211748,
+          0.015353912635425298
+        ],
+        "n_flips": 1,
+        "accuracy_before": 0.9260273972602739,
+        "accuracy_after": 0.9260273972602739,
+        "abstention_decision_changed_rate": 0.005479452054794521,
+        "mean_abs_change_true_label_score": 0.005012177642678545
+      }
+    },
+    {
+      "perturbation": "British spelling",
+      "meaning": "type and content should not change",
+      "n": 1275,
+      "ensemble": {
+        "type_flip_rate": 0.02196078431372549,
+        "type_flip_rate_95ci": [
+          0.015236964380556623,
+          0.03155663382582015
+        ],
+        "n_flips": 28,
+        "accuracy_before": 0.8737254901960785,
+        "accuracy_after": 0.8698039215686274,
+        "abstention_decision_changed_rate": 0.034509803921568626,
+        "mean_abs_change_true_label_score": 0.018366510072694905
+      },
+      "bert": {
+        "type_flip_rate": 0.014901960784313726,
+        "type_flip_rate_95ci": [
+          0.009560546110176048,
+          0.02315781400572885
+        ],
+        "n_flips": 19,
+        "accuracy_before": 0.832156862745098,
+        "accuracy_after": 0.8313725490196079,
+        "abstention_decision_changed_rate": 0.03372549019607843,
+        "mean_abs_change_true_label_score": 0.010928904637694359
+      },
+      "tfidf": {
+        "type_flip_rate": 0.0196078431372549,
+        "type_flip_rate_95ci": [
+          0.013316011414767716,
+          0.028785840761451763
+        ],
+        "n_flips": 25,
+        "accuracy_before": 0.8729411764705882,
+        "accuracy_after": 0.8650980392156863,
+        "abstention_decision_changed_rate": 0.038431372549019606,
+        "mean_abs_change_true_label_score": 0.020970148915509315
+      }
+    },
+    {
+      "perturbation": "European party names",
+      "meaning": "type should not change; parties change",
+      "n": 3199,
+      "ensemble": {
+        "type_flip_rate": 0.008440137542982182,
+        "type_flip_rate_95ci": [
+          0.005807065955675053,
+          0.012252397241006293
+        ],
+        "n_flips": 27,
+        "accuracy_before": 0.8924663957486715,
+        "accuracy_after": 0.8934041888090029,
+        "abstention_decision_changed_rate": 0.019068458893404187,
+        "mean_abs_change_true_label_score": 0.010275648358867673
+      },
+      "bert": {
+        "type_flip_rate": 0.014066895904970303,
+        "type_flip_rate_95ci": [
+          0.0105297054602147,
+          0.018769776599716077
+        ],
+        "n_flips": 45,
+        "accuracy_before": 0.8690215692403876,
+        "accuracy_after": 0.8680837761800563,
+        "abstention_decision_changed_rate": 0.018130665833072834,
+        "mean_abs_change_true_label_score": 0.008468310348689556
+      },
+      "tfidf": {
+        "type_flip_rate": 0.009377930603313536,
+        "type_flip_rate_95ci": [
+          0.0065768529188037226,
+          0.013355946755085862
+        ],
+        "n_flips": 30,
+        "accuracy_before": 0.8868396373866834,
+        "accuracy_after": 0.8868396373866834,
+        "abstention_decision_changed_rate": 0.018755861206627072,
+        "mean_abs_change_true_label_score": 0.011824267606376903
+      }
+    },
+    {
+      "perturbation": "3% letter drops (OCR noise)",
+      "meaning": "type should not change; text degraded",
+      "n": 992,
+      "ensemble": {
+        "type_flip_rate": 0.05443548387096774,
+        "type_flip_rate_95ci": [
+          0.04195868211841028,
+          0.07034994206439146
+        ],
+        "n_flips": 54,
+        "accuracy_before": 0.8921370967741935,
+        "accuracy_after": 0.8810483870967742,
+        "abstention_decision_changed_rate": 0.08669354838709678,
+        "mean_abs_change_true_label_score": 0.05934221722335878
+      },
+      "bert": {
+        "type_flip_rate": 0.057459677419354836,
+        "type_flip_rate_95ci": [
+          0.04461222502131652,
+          0.07372145374847978
+        ],
+        "n_flips": 57,
+        "accuracy_before": 0.8669354838709677,
+        "accuracy_after": 0.8377016129032258,
+        "abstention_decision_changed_rate": 0.06653225806451613,
+        "mean_abs_change_true_label_score": 0.047947999089956284
+      },
+      "tfidf": {
+        "type_flip_rate": 0.06048387096774194,
+        "type_flip_rate_95ci": [
+          0.047276769643229126,
+          0.07708196371356174
+        ],
+        "n_flips": 60,
+        "accuracy_before": 0.8800403225806451,
+        "accuracy_after": 0.8659274193548387,
+        "abstention_decision_changed_rate": 0.1028225806451613,
+        "mean_abs_change_true_label_score": 0.06486500746636022
+      }
+    }
+  ],
+  "counterfactual_flip_examples_ensemble": {
+    "gender swap (he<->she)": [
+      {
+        "before": "Subject to the limitations stated above and in the Plan, this Agreement shall be binding upon Participant and his or her successors in interest and the successors of the Company.",
+        "after": "Subject to the limitations stated above and in the Plan, this Agreement shall be binding upon Participant and hers or his successors in interest and the successors of the Company.",
+        "pred_before": "Successors",
+        "pred_after": "Binding Effects",
+        "true": "Binding Effects"
+      },
+      {
+        "before": "At the same time as an Eligible Employee or Director makes a deferral election under Article II, he or she shall elect, pursuant to Section 5.2, the form in which such distribution will be made. An Eligible Employee or Director may elect that his or her Account be distributed in a lump sum or in mon",
+        "after": "At the same time as an Eligible Employee or Director makes a deferral election under Article II, she or he shall elect, pursuant to Section 5.2, the form in which such distribution will be made. An Eligible Employee or Director may elect that hers or his Account be distributed in a lump sum or in mo",
+        "pred_before": "General",
+        "pred_after": "Payments",
+        "true": "General"
+      },
+      {
+        "before": "An Employee\u2019s Employment shall equal the total aggregate periods of his regular, full-time employment with an Employer. Periods of Employment are aggregated on the basis that one calendar month of Employment equals one month and each additional 30 days of Employment equals one month. Notwithstanding",
+        "after": "An Employee\u2019s Employment shall equal the total aggregate periods of her regular, full-time employment with an Employer. Periods of Employment are aggregated on the basis that one calendar month of Employment equals one month and each additional 30 days of Employment equals one month. Notwithstanding",
+        "pred_before": "Employment",
+        "pred_after": "General",
+        "true": "Employment"
+      },
+      {
+        "before": "Green shall continue to serve as the Senior Vice President, Chief Scientific Officer and Global Head of Research and Development of the Company until the Transition Date, when he shall (i) relinquish such titles and positions, (ii)\u00a0terminate employment as an employee of the Company, and (iii) become",
+        "after": "Green shall continue to serve as the Senior Vice President, Chief Scientific Officer and Global Head of Research and Development of the Company until the Transition Date, when she shall (i) relinquish such titles and positions, (ii)\u00a0terminate employment as an employee of the Company, and (iii) becom",
+        "pred_before": "Employment",
+        "pred_after": "Titles",
+        "true": "Titles"
+      }
+    ],
+    "US state -> European jurisdiction": [
+      {
+        "before": "This Lease shall be construed and enforced in accordance with the laws of the State of North Carolina. \u00a0Landlord and Tenant waive trial by jury in any action to which they are parties, and further agree that any action arising out of this Lease (except an action for possession by Landlord, which may",
+        "after": "This Lease shall be construed and enforced in accordance with the laws of France. \u00a0Landlord and Tenant waive trial by jury in any action to which they are parties, and further agree that any action arising out of this Lease (except an action for possession by Landlord, which may be brought in whatev",
+        "pred_before": "Governing Laws",
+        "pred_after": "Waiver Of Jury Trials",
+        "true": "Governing Laws"
+      },
+      {
+        "before": "This Purchase Agreement shall be binding upon the parties hereto, their heirs, executors, successors, and legal representatives. The laws of the State of Delaware shall govern the rights of the parties as to this Agreement.",
+        "after": "This Purchase Agreement shall be binding upon the parties hereto, their heirs, executors, successors, and legal representatives. The laws of the Netherlands shall govern the rights of the parties as to this Agreement.",
+        "pred_before": "Governing Laws",
+        "pred_after": "Binding Effects",
+        "true": "Governing Laws"
+      },
+      {
+        "before": "This Instrument shall be governed by the law of the State of Texas. Borrowers hereby agree to the jurisdiction of and venue in the federal and state couiis of the State of Texas in Harris County, Texas. In the event that any provision of this Instrument, the Note or any of the other Loan Documents c",
+        "after": "This Instrument shall be governed by the law of France. Borrowers hereby agree to the jurisdiction of and venue in the federal and state couiis of France in Harris County, France. In the event that any provision of this Instrument, the Note or any of the other Loan Documents conflicts with applicabl",
+        "pred_before": "Governing Laws",
+        "pred_after": "Severability",
+        "true": "Governing Laws"
+      },
+      {
+        "before": "This Agreement is entered into under, and shall be governed, interpreted and enforced for all purposes by, the laws of the State of Texas, without regard to conflicts of laws principles thereof.",
+        "after": "This Agreement is entered into under, and shall be governed, interpreted and enforced for all purposes by, the laws of Ireland, without regard to conflicts of laws principles thereof.",
+        "pred_before": "Applicable Laws",
+        "pred_after": "Governing Laws",
+        "true": "Governing Laws"
+      }
+    ],
+    "$ -> EUR": [],
+    "British spelling": [
+      {
+        "before": "So long as this as this Note is outstanding, upon written request of the Holder, the Company shall furnish to the Holder the then-current number of common shares issued and outstanding, the then-current number of common shares authorized, and the then-current number of shares reserved for third part",
+        "after": "So long as this as this Note is outstanding, upon written request of the Holder, the Company shall furnish to the Holder the then-current number of common shares issued and outstanding, the then-current number of common shares authorised, and the then-current number of shares reserved for third part",
+        "pred_before": "Capitalization",
+        "pred_after": "General",
+        "true": "Capitalization"
+      },
+      {
+        "before": "Purchaser is an Indiana limited liability company duly organized, and validly existing, under the laws of Indiana and has full power and authority to carry on the business in which it is engaged and to execute and deliver and carry out the transactions contemplated by this Agreement.",
+        "after": "Purchaser is an Indiana limited liability company duly organised, and validly existing, under the laws of Indiana and has full power and authority to carry on the business in which it is engaged and to execute and deliver and carry out the transactions contemplated by this Agreement.",
+        "pred_before": "Organizations",
+        "pred_after": "Authority",
+        "true": "Organizations"
+      },
+      {
+        "before": "As additional consideration to the execution, delivery, and performance of this Amendment by the parties hereto and to induce Agent and the Lenders to enter into this Amendment, Borrower and each Guarantor hereby represents and warrants that it does not know of any defenses, counterclaims or rights ",
+        "after": "As additional consideration to the execution, delivery, and performance of this Amendment by the parties hereto and to induce Agent and the Lenders to enter into this Amendment, Borrower and each Guarantor hereby represents and warrants that it does not know of any defences, counterclaims or rights ",
+        "pred_before": "Releases",
+        "pred_after": "Waivers",
+        "true": "Releases"
+      },
+      {
+        "before": "FIS is a validly existing corporation under the laws of Italy; the execution, delivery and performance of this Agreement by FIS (where applicable) has been duly authorized by all requisite corporate action; this Agreement constitutes the legal, valid and binding obligation of FIS, enforceable agains",
+        "after": "FIS is a validly existing corporation under the laws of Italy; the execution, delivery and performance of this Agreement by FIS (where applicable) has been duly authorised by all requisite corporate action; this Agreement constitutes the legal, valid and binding obligation of FIS, enforceable agains",
+        "pred_before": "Authorizations",
+        "pred_after": "Authority",
+        "true": "Enforceability"
+      }
+    ],
+    "European party names": [
+      {
+        "before": "Notwithstanding anything else herein to the contrary, the Company may withhold (or cause there to be withheld, as the case may be) from any amounts otherwise due or payable under or pursuant to this Agreement such federal, state and local income, employment, or other taxes as may be required to be w",
+        "after": "Notwithstanding anything else herein to the contrary, Lumen Technik GmbH may withhold (or cause there to be withheld, as the case may be) from any amounts otherwise due or payable under or pursuant to this Agreement such federal, state and local income, employment, or other taxes as may be required ",
+        "pred_before": "Withholdings",
+        "pred_after": "Tax Withholdings",
+        "true": "Tax Withholdings"
+      },
+      {
+        "before": "The Executive\u2019s positions and titles shall continue to be Chairman and Chief Executive Officer of the Employer. If elected to the Board of Directors (the \u201c Board \u201d) by the Employer\u2019s shareholders, the Executive shall continue to be a member of, and Chairman of, the Board. It is expected that the Exe",
+        "after": "The Executive\u2019s positions and titles shall continue to be Chairman and Chief Executive Officer of the Employer. If elected to the Board of Directors (the \u201c Board \u201d) by the Employer\u2019s shareholders, the Executive shall continue to be a member of, and Chairman of, the Board. It is expected that the Exe",
+        "pred_before": "Positions",
+        "pred_after": "Titles",
+        "true": "Titles"
+      },
+      {
+        "before": "Prior to the issuance or delivery of Common Stock in connection with the vesting of the RSUs, payment must be made by the Participant of any federal, state, local or other taxes that become due on account of the Award. Such obligations shall be satisfied by withholding whole shares of Common Stock w",
+        "after": "Prior to the issuance or delivery of Common Stock in connection with the vesting of the RSUs, payment must be made by the Participant of any federal, state, local or other taxes that become due on account of the Award. Such obligations shall be satisfied by withholding whole shares of Common Stock w",
+        "pred_before": "Withholdings",
+        "pred_after": "Payments",
+        "true": "Tax Withholdings"
+      },
+      {
+        "before": "The Shares are genuine, and the Borrower has good title to the Shares. The Shares are owned by the Borrower free and clear of any pledge, mortgage, security interest, hypothecation, lien, charge, encumbrance, conditional sale agreements, rights or claims of third parties, other burdens and any secur",
+        "after": "The Shares are genuine, and Rivi\u00e8re \u00c9nergie SAS has good title to the Shares. The Shares are owned by Rivi\u00e8re \u00c9nergie SAS free and clear of any pledge, mortgage, security interest, hypothecation, lien, charge, encumbrance, conditional sale agreements, rights or claims of third parties, other burdens",
+        "pred_before": "Liens",
+        "pred_after": "Titles",
+        "true": "Titles"
+      }
+    ],
+    "3% letter drops (OCR noise)": [
+      {
+        "before": "This Sublease contains the entire agreement between the parties with respect to the subject matter contained herein and all prior negotiations and agreements are merged herein. In the event any provisions of this Sublease are held to be invalid or unenforceable in any respect, the validity, legality",
+        "after": "This Sublease contains the entire agreement between the parties with respect to the subject matter contained herein and ll prior negotiations and agreements are meged herein. In the event an provisions of this Sublease are hed to be nvalid or unenforceable in any respect, the validity, legality or e",
+        "pred_before": "Severability",
+        "pred_after": "Entire Agreements",
+        "true": "Entire Agreements"
+      },
+      {
+        "before": "Perry acknowledges that the terms of this Agreement fully comply with applicable law including but not limited to the OWBPA, as amended, and implementing regulations, and that said terms therefore are final and binding. Specifically, Perry acknowledges that this Agreement specifically refers to his ",
+        "after": "Pery acnowledges that the terms of this Agreement fully omply wth applicable law including but not limited to the OWBPA, as amended, and implementing regulations, and tat said terms therefore are final ad binding. Specifically, Perry acknowledes tht this Agreement pecifically refers to his rights an",
+        "pred_before": "Waivers",
+        "pred_after": "Enforceability",
+        "true": "Compliance With Laws"
+      },
+      {
+        "before": "EACH OF PLP INDONESIA AND THE BANK ACKNOWLEDGES THAT BY AGREEING TO BINDING ARBITRATION THEY HAVE IRREVOCABLY WAIVED ANY RIGHT THEY MAY HAVE TO JURY TRIAL WITH REGARD TO A DISPUTE. Representation by PLP Indonesia. PLP Indonesia represents and warrants to the Bank that it has received the requisite a",
+        "after": "EACH OF PLP INDONESIA AND THE BANK ACKNOWLEDGES THAT BY AGREEING TO BINDING ARBTRATION THEY HAVE IRREVOCABLY WAIVED ANY RIGHT THEY MAY HAVE TO JUY TRIA WIH REGARD TO A DISPUTE. Representation by PLP Indonsia. PLP Indonesia represents an warrants to the Bank that it ha received the requisite authoriz",
+        "pred_before": "Waiver Of Jury Trials",
+        "pred_after": "Arbitration",
+        "true": "Waiver Of Jury Trials"
+      },
+      {
+        "before": "Unless otherwise specified in the notice of an Award or other written agreement, the Option will vest and become exercisable in 25% annual, cumulative installments beginning on the first anniversary of the Date of Grant. The Option may not be exercised as to any shares after the Expiration Date.",
+        "after": "Unless otherwise specified in the notice of an Award or oter written agreement, the Option will vst and become exrcisable in 25% annual, cumulativ installments beginning on th first anniversary of the Date f Grant. The ption may not be exercisd as to any shares afte the Expiration Date.",
+        "pred_before": "Vesting",
+        "pred_after": "Terms",
+        "true": "Vesting"
+      }
+    ]
+  },
+  "counterfactual_edit_samples_for_review": {
+    "gender swap (he<->she)": [
+      {
+        "before": "If the Executive\u2019s employment is terminated for any reason under this Agreement, he shall be deemed (without further action, deed or notice) to resign (i) if a member, fro",
+        "after": "If the Executive\u2019s employment is terminated for any reason under this Agreement, she shall be deemed (without further action, deed or notice) to resign (i) if a member, fr"
+      },
+      {
+        "before": " on appropriate subcommittees as reasonably requested and agreed upon by the Board, make himself available to the Company at mutually convenient times and places, attend external m",
+        "after": " on appropriate subcommittees as reasonably requested and agreed upon by the Board, make herself available to the Company at mutually convenient times and places, attend external m"
+      },
+      {
+        "before": "to continue the employment of the Executive, and the Executive hereby agrees to continue his employment with the Company, for the Employment Term (as defined below).\u00a0 During the Em",
+        "after": "to continue the employment of the Executive, and the Executive hereby agrees to continue her employment with the Company, for the Employment Term (as defined below).\u00a0 During the Em"
+      },
+      {
+        "before": "shall from time to time reasonably assign to the Employee. The Employee agrees to devote his/her entire business time, attention and energies to the business and interests of the C",
+        "after": "shall from time to time reasonably assign to the Employee. The Employee agrees to devote hers/his entire business time, attention and energies to the business and interests of the "
+      }
+    ],
+    "US state -> European jurisdiction": [
+      {
+        "before": "ees to indemnify, in accordance with its Bylaws, Articles of Incorporation and applicable Nevada law, Executive if he is or becomes a party or is threatened to be made a party to a",
+        "after": "ees to indemnify, in accordance with its Bylaws, Articles of Incorporation and applicable English law, Executive if he is or becomes a party or is threatened to be made a party to "
+      },
+      {
+        "before": "The Company has one subsidiary, Relmada Therapeutics, Inc., a Delaware corporation.",
+        "after": "The Company has one subsidiary, Relmada Therapeutics, Inc., a Dutch corporation."
+      },
+      {
+        "before": "nd all rights under it, shall be governed by and construed in accordance with the laws of the State of Delaware, without giving effect to principles of conflicts of laws.",
+        "after": "nd all rights under it, shall be governed by and construed in accordance with the laws of Ireland, without giving effect to principles of conflicts of laws."
+      },
+      {
+        "before": " and the rights and obligations of the parties hereunder shall be governed by the laws of the State of Delaware, without regard to its conflicts of laws principles.",
+        "after": " and the rights and obligations of the parties hereunder shall be governed by the laws of Ireland, without regard to its conflicts of laws principles."
+      }
+    ],
+    "$ -> EUR": [
+      {
+        "before": "s required by Sections 12.3(a) and 12.3(b), and (ii) payment by the assigning Lender of a $3,500 fee to the Administrative Agent for processing such assignment (unless such fee is ",
+        "after": "s required by Sections 12.3(a) and 12.3(b), and (ii) payment by the assigning Lender of a EUR 3,500 fee to the Administrative Agent for processing such assignment (unless such fee "
+      },
+      {
+        "before": "cebook will pay Advisor a fee for services rendered under this Agreement in the amount of $10,000 per month.",
+        "after": "cebook will pay Advisor a fee for services rendered under this Agreement in the amount of EUR 10,000 per month."
+      },
+      {
+        "before": "y event no less than three Business Days in the case of a Letter of Credit denominated in dollars and no less than four Business Days in the case of a Letter of Credit denominated ",
+        "after": "y event no less than three Business Days in the case of a Letter of Credit denominated in euros and no less than four Business Days in the case of a Letter of Credit denominated in"
+      },
+      {
+        "before": "all provide that all adjustments for claims with the insurers in excess of Fifty Thousand Dollars ($50,000.00) (exclusive of any deductible) shall be made with Landlord, Tenant and",
+        "after": "all provide that all adjustments for claims with the insurers in excess of Fifty Thousand Euros (EUR 50,000.00) (exclusive of any deductible) shall be made with Landlord, Tenant an"
+      }
+    ],
+    "British spelling": [
+      {
+        "before": " or modification to this Agreement must be made in writing and duly executed by an authorized representative of each of the Parties hereto.",
+        "after": " or modification to this Agreement must be made in writing and duly executed by an authorised representative of each of the Parties hereto."
+      },
+      {
+        "before": " of its affiliates, or their respective successors or assigns, and that they have no defenses, offsets or counterclaims with respect to any Obligations owed by the Credit Parties t",
+        "after": " of its affiliates, or their respective successors or assigns, and that they have no defences, offsets or counterclaims with respect to any Obligations owed by the Credit Parties t"
+      },
+      {
+        "before": " delivery of a written notice of exercise (the \u201c Notice of Exercise \u201d) in the form authorized by the Company, which may be electronic or written.\u00a0 Such notice shall (a)\u00a0state the e",
+        "after": " delivery of a written notice of exercise (the \u201c Notice of Exercise \u201d) in the form authorised by the Company, which may be electronic or written.\u00a0 Such notice shall (a)\u00a0state the e"
+      },
+      {
+        "before": "be binding upon the parties unless reduced to writing and signed by the respective authorized officers of the parties.",
+        "after": "be binding upon the parties unless reduced to writing and signed by the respective authorised officers of the parties."
+      }
+    ],
+    "European party names": [
+      {
+        "before": "The Seller(s) and the Company will, and will cause each of its respective affiliates, and its and their dire",
+        "after": "The Seller(s) and Lumen Technik GmbH will, and will cause each of its respective affiliates, and its and the"
+      },
+      {
+        "before": "This Agreement shall inure to the benefit of, be binding upon, and be enforceable by the Company and its successors and assigns. The Participant shall not assign (except in ac",
+        "after": "This Agreement shall inure to the benefit of, be binding upon, and be enforceable by Lumen Technik GmbH and its successors and assigns. The Participant shall not assign (excep"
+      },
+      {
+        "before": " and each other Obligor, agrees that at any time and from time to time, at the expense of the Borrower or such other Obligor, it will promptly execute and deliver all further instr",
+        "after": " and each other Obligor, agrees that at any time and from time to time, at the expense of Rivi\u00e8re \u00c9nergie SAS or such other Obligor, it will promptly execute and deliver all furthe"
+      },
+      {
+        "before": "n providing the compensation and benefits provided for in accordance with this Section 7, the Company and its directors, officers, employees, subsidiaries, affiliates, stockholders",
+        "after": "n providing the compensation and benefits provided for in accordance with this Section 7, Lumen Technik GmbH and its directors, officers, employees, subsidiaries, affiliates, stock"
+      }
+    ],
+    "3% letter drops (OCR noise)": [
+      {
+        "before": "If any term or provision of this Agreement or the application thereof to any circumstance shall, in ",
+        "after": "If any ter o provision of this Agreement or the application thereof to any circumstance shall, in an"
+      },
+      {
+        "before": "This Agreement shall be binding upon and inure to the benefit of the Company and any successor of the Company. Excep",
+        "after": "This Agreement shall be biding upon and inure to the benefit of the Company and any successor of the Company. Except"
+      },
+      {
+        "before": " Agreement has a one-year term and shall continue in force until the first anniversary of the date hereof. Thereafter, this Agreement may be renewed for an unlimited number of succ",
+        "after": " Agreement has a one-year term and shall continue in force until the first anniversary of he date hereof. Thereafter, this Agreement may b renewed for an ulimited nuber of successi"
+      },
+      {
+        "before": " York without regard to the choice of l aw pro v i s ion s of an y juri s diction. Each party hereto irrevocably submits to the exclusive jurisdiction of the courts located within ",
+        "after": " York without regard to the choice of l aw pro v i s ion s of an y juri s diction. Each paty herto irrevocal submits to the exclusive jurisdiction of the courts lcated within Sufol"
+      }
+    ]
+  },
+  "out_of_scope": {
+    "note": "None of these inputs has a correct LEDGAR label (or is not an English contract clause). Any answered prediction is a confident error. A confidence threshold reduces but does not guarantee the detection of out-of-scope inputs.",
+    "items": [
+      {
+        "input": "GDPR data processing",
+        "text": "The Processor shall process Personal Data only on documented instructions from the Controller, including with regard to transfers of personal data to a third country, in accordance with Article 28 of Regulation (EU) 2016/679.",
+        "ensemble": {
+          "predicted": "General",
+          "confidence": 0.2245353293888203,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "General",
+          "confidence": 0.896775484085083,
+          "abstains": false
+        },
+        "tfidf": {
+          "predicted": "Terms",
+          "confidence": 0.0877174207916816,
+          "abstains": true
+        }
+      },
+      {
+        "input": "Force majeure",
+        "text": "Neither Party shall be liable for any failure or delay in performance caused by events beyond its reasonable control, including acts of God, pandemic, war, terrorism, strikes or governmental action.",
+        "ensemble": {
+          "predicted": "Waivers",
+          "confidence": 0.18570310676678742,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Waivers",
+          "confidence": 0.7188315391540527,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "General",
+          "confidence": 0.20368246135874535,
+          "abstains": true
+        }
+      },
+      {
+        "input": "Non-compete",
+        "text": "During the term and for twelve months thereafter, the Seller shall not, directly or indirectly, engage in any business that competes with the Business in the European Economic Area.",
+        "ensemble": {
+          "predicted": "Terms",
+          "confidence": 0.16153662840401692,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Integration",
+          "confidence": 0.104385145008564,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Terms",
+          "confidence": 0.20164314851393494,
+          "abstains": true
+        }
+      },
+      {
+        "input": "French governing law (FR)",
+        "text": "Le pr\u00e9sent contrat est r\u00e9gi par le droit fran\u00e7ais. Tout litige relatif \u00e0 son interpr\u00e9tation ou \u00e0 son ex\u00e9cution rel\u00e8vera de la comp\u00e9tence exclusive du Tribunal de commerce de Paris.",
+        "ensemble": {
+          "predicted": "Interpretations",
+          "confidence": 0.0877849126621547,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Interpretations",
+          "confidence": 0.39489129185676575,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Notices",
+          "confidence": 0.03818185034395952,
+          "abstains": true
+        }
+      },
+      {
+        "input": "German confidentiality (DE)",
+        "text": "Die Parteien verpflichten sich, alle im Rahmen dieses Vertrages erhaltenen vertraulichen Informationen geheim zu halten und nicht an Dritte weiterzugeben.",
+        "ensemble": {
+          "predicted": "Death",
+          "confidence": 0.09462061223638152,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Disclosures",
+          "confidence": 0.09907421469688416,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Death",
+          "confidence": 0.11790310111471802,
+          "abstains": true
+        }
+      },
+      {
+        "input": "French termination (FR)",
+        "text": "Chaque partie pourra r\u00e9silier le pr\u00e9sent contrat moyennant un pr\u00e9avis de trente (30) jours notifi\u00e9 par lettre recommand\u00e9e avec accus\u00e9 de r\u00e9ception.",
+        "ensemble": {
+          "predicted": "Notices",
+          "confidence": 0.07432170903972823,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Notices",
+          "confidence": 0.18041668832302094,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Modifications",
+          "confidence": 0.060617748006832346,
+          "abstains": true
+        }
+      },
+      {
+        "input": "E-mail, not a clause",
+        "text": "Hi team, please find attached the signed version of the supplier agreement. Let me know if you need anything else before Friday.",
+        "ensemble": {
+          "predicted": "Agreements",
+          "confidence": 0.07277348201126646,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Agreements",
+          "confidence": 0.2927286624908447,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Notices",
+          "confidence": 0.056649654777843735,
+          "abstains": true
+        }
+      },
+      {
+        "input": "Random text",
+        "text": "Preheat the oven to 180 degrees, mix the flour with the eggs and bake for twenty-five minutes.",
+        "ensemble": {
+          "predicted": "Terms",
+          "confidence": 0.04906570990098197,
+          "abstains": true
+        },
+        "bert": {
+          "predicted": "Terminations",
+          "confidence": 0.05581400915980339,
+          "abstains": true
+        },
+        "tfidf": {
+          "predicted": "Terms",
+          "confidence": 0.05183037818052717,
+          "abstains": true
+        }
+      }
+    ],
+    "confident_errors": {
+      "ensemble": [],
+      "bert": [
+        "GDPR data processing"
+      ],
+      "tfidf": []
+    }
+  },
+  "retrieval": {
+    "protocol": "test clause as query, hybrid (dense+BM25) top-10, exact duplicates of the query removed, relevant = same LEDGAR label; <=150 queries per family",
+    "hybrid_p@10_by_contract_family": {
+      "commercial_ip": {
+        "p@10": 0.6833333333333333,
+        "n_queries": 150,
+        "sd": 0.3615552823873857
+      },
+      "credit_finance": {
+        "p@10": 0.7953333333333333,
+        "n_queries": 150,
+        "sd": 0.31714069783334686
+      },
+      "employment": {
+        "p@10": 0.7126666666666667,
+        "n_queries": 150,
+        "sd": 0.33749995884773415
+      },
+      "generic": {
+        "p@10": 0.71,
+        "n_queries": 150,
+        "sd": 0.34616951531487195
+      },
+      "m&a_securities": {
+        "p@10": 0.7713333333333333,
+        "n_queries": 150,
+        "sd": 0.31671999550952823
+      },
+      "real_estate": {
+        "p@10": 0.6,
+        "n_queries": 150,
+        "sd": 0.37876993896911443
+      }
+    },
+    "cross_family_results_share_vs_bank_share": {
+      "commercial_ip": {
+        "share_of_cross_family_results": 0.03543307086614173,
+        "share_of_bank": 0.03517264725795532
+      },
+      "credit_finance": {
+        "share_of_cross_family_results": 0.17859699355762348,
+        "share_of_bank": 0.26203452945159106
+      },
+      "employment": {
+        "share_of_cross_family_results": 0.19971367215461705,
+        "share_of_bank": 0.17828368314150306
+      },
+      "generic": {
+        "share_of_cross_family_results": 0.4617036506800286,
+        "share_of_bank": 0.4261848341232227
+      },
+      "m&a_securities": {
+        "share_of_cross_family_results": 0.09770937723693629,
+        "share_of_bank": 0.0731719702098849
+      },
+      "real_estate": {
+        "share_of_cross_family_results": 0.026843235504652826,
+        "share_of_bank": 0.025152335815842926
+      }
+    },
+    "gender_swap_top10": {
+      "n_queries": 300,
+      "mean_jaccard": 0.8457332141542667,
+      "share_identical_sets": 0.44,
+      "p@10_original": 0.678,
+      "p@10_swapped": 0.675,
+      "reading": "results change (different precedents shown) even when relevance stays similar"
+    },
+    "bank_pronoun_share": {
+      "both (he/she)": 0.012102234258632364,
+      "female": 0.003385240352064997,
+      "male": 0.03485104942450914,
+      "none": 0.9496614759647936
+    }
+  }
+}

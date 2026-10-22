@@ -32,6 +32,7 @@ def run() -> dict:
     clf.fit(Atr, ytr)
     train_s = time.time() - t0
 
+    ARTIFACTS.mkdir(parents=True, exist_ok=True)
     joblib.dump({"vectorizer": vec, "classifier": clf}, ARTIFACTS / "baseline.joblib")
     out = {"model": "tfidf(1-2gram)+logreg", "train_seconds": train_s}
     for split, X, y in (("validation", Xva, yva), ("test", Xte, yte)):

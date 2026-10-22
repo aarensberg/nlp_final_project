@@ -3,7 +3,7 @@
   "thresholds_used": {
     "ensemble": 0.708863824720781,
     "bert": 0.8508285284042358,
-    "tfidf": 0.7561507298557084
+    "tfidf": 0.7562073504192992
   },
   "caveats": [
     "Groups are keyword proxies inferred from clause text (slices.py), not metadata, not certified personal attributes; a clause can be mis-assigned.",
@@ -1644,9 +1644,9 @@
         "sd": 0.3615552823873857
       },
       "credit_finance": {
-        "p@10": 0.7953333333333333,
+        "p@10": 0.796,
         "n_queries": 150,
-        "sd": 0.31714069783334686
+        "sd": 0.3162024667835468
       },
       "employment": {
         "p@10": 0.7126666666666667,
@@ -1664,43 +1664,43 @@
         "sd": 0.31671999550952823
       },
       "real_estate": {
-        "p@10": 0.6,
+        "p@10": 0.5993333333333334,
         "n_queries": 150,
-        "sd": 0.37876993896911443
+        "sd": 0.37832907486590145
       }
     },
     "cross_family_results_share_vs_bank_share": {
       "commercial_ip": {
-        "share_of_cross_family_results": 0.03543307086614173,
+        "share_of_cross_family_results": 0.035,
         "share_of_bank": 0.03517264725795532
       },
       "credit_finance": {
-        "share_of_cross_family_results": 0.17859699355762348,
+        "share_of_cross_family_results": 0.17821428571428571,
         "share_of_bank": 0.26203452945159106
       },
       "employment": {
-        "share_of_cross_family_results": 0.19971367215461705,
+        "share_of_cross_family_results": 0.1992857142857143,
         "share_of_bank": 0.17828368314150306
       },
       "generic": {
-        "share_of_cross_family_results": 0.4617036506800286,
+        "share_of_cross_family_results": 0.4617857142857143,
         "share_of_bank": 0.4261848341232227
       },
       "m&a_securities": {
-        "share_of_cross_family_results": 0.09770937723693629,
+        "share_of_cross_family_results": 0.09892857142857144,
         "share_of_bank": 0.0731719702098849
       },
       "real_estate": {
-        "share_of_cross_family_results": 0.026843235504652826,
+        "share_of_cross_family_results": 0.026785714285714284,
         "share_of_bank": 0.025152335815842926
       }
     },
     "gender_swap_top10": {
       "n_queries": 300,
-      "mean_jaccard": 0.8457332141542667,
-      "share_identical_sets": 0.44,
+      "mean_jaccard": 0.8469220253430779,
+      "share_identical_sets": 0.44333333333333336,
       "p@10_original": 0.678,
-      "p@10_swapped": 0.675,
+      "p@10_swapped": 0.6746666666666666,
       "reading": "results change (different precedents shown) even when relevance stays similar"
     },
     "bank_pronoun_share": {

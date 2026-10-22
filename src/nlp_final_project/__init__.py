@@ -2,7 +2,7 @@
 
 import sys
 
-USAGE = """usage: nlp-final-project <command> [options]
+USAGE = """usage: nlp-final-project <command> [options]      (each command accepts --help)
 
   eda        explore LEDGAR (imbalance, lengths, leakage, slices)
   baseline   train the TF-IDF + logistic regression baseline (~5 min, CPU)
@@ -15,11 +15,31 @@ USAGE = """usage: nlp-final-project <command> [options]
   all        eda, evaluate, index, audit  (never trains; needs existing models)
 """
 
+# Commands without options: argparse only provides --help, parsed BEFORE any heavy import.
+SIMPLE = {
+    "eda": "Explore LEDGAR and write reports/eda.json + figures.",
+    "baseline": "Train TF-IDF + logistic regression; writes artifacts/baseline.joblib (~5 min, CPU).",
+    "evaluate": "Fit temperatures, ensemble weight and thresholds on VALIDATION, evaluate the 3 variants "
+                "on test; writes reports/eval_metrics.json, per_class_test.csv, inference_config.json.",
+    "index": "Build the retrieval index if missing/stale (~5 min) and evaluate it; writes reports/retrieval_*.json.",
+    "audit": "Bias and failure-mode audit (~10 min); writes reports/audit.json + figures.",
+    "all": "Run eda, evaluate, index and audit. Never trains: refuses to start if a model is missing.",
+}
 
-def main() -> None:
+
+def main(argv=None) -> None:
+    import argparse
     import json
 
-    cmd, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("help", [])
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return
+    cmd, args = argv[0], argv[1:]
+
+    if cmd in SIMPLE:
+        argparse.ArgumentParser(prog=f"nlp-final-project {cmd}", description=SIMPLE[cmd]).parse_args(args)
+
     if cmd == "eda":
         from .eda import run
         print(json.dumps(run(), indent=2)[:3000])
@@ -56,4 +76,5 @@ def main() -> None:
         from . import audit, eda, evaluate, retrieval
         eda.run(); evaluate.run(); retrieval.cli_index(); audit.run()  # noqa: E702
     else:
-        print(USAGE)
+        print(f"unknown command {cmd!r}\n\n{USAGE}", file=sys.stderr)
+        sys.exit(2)

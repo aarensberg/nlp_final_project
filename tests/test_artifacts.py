@@ -142,3 +142,17 @@ def test_cli_search_runs_and_states_filter_limit():
     assert r.returncode == 0, r.stderr[-2000:]
     assert "role of the duration is not checked" in r.stdout
     assert r.stdout.count("[") >= 3
+
+
+def test_saved_thresholds_meet_the_target_on_the_validation_set_they_accept(predictor):
+    """The set really accepted by `>=` (tie groups included) reaches the target on validation."""
+    from nlp_final_project.inference import split_logits
+    from nlp_final_project.metrics import answers
+    lb, yv = split_logits("validation", "bert")
+    lt, _ = split_logits("validation", "tfidf")
+    probs = predictor.probs_from_logits(lb, lt)
+    target = predictor.cfg["abstention"]["target_validation_accuracy"]
+    for v, p in probs.items():
+        acc = answers(p.max(1), predictor.threshold(v))
+        assert acc.any()
+        assert (p.argmax(1)[acc] == yv[acc]).mean() >= target, v

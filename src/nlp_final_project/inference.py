@@ -23,12 +23,11 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-from sklearn.metrics import f1_score
 
 from .config import ARTIFACTS, REPORTS, get_device, load_json, save_json
 from .data import label_names, load_ledgar, split_arrays
 from .fingerprint import cached_npz, sha256_file, sha256_files, sha256_json, sha256_texts
-from .metrics import fit_temperature, softmax, threshold_for_precision
+from .metrics import MACRO_F1_DEFINITION, answers, fit_temperature, macro_f1, select_threshold, softmax
 
 BERT_DIR = ARTIFACTS / "classifier"
 TFIDF_PATH = ARTIFACTS / "baseline.joblib"
@@ -37,6 +36,10 @@ CONFIG_COPY = REPORTS / "inference_config.json"  # committed copy (artifacts/ is
 VARIANTS = ("ensemble", "bert", "tfidf")
 TARGET_ACCURACY = 0.95  # abstention target, met on validation
 WEIGHT_GRID = [round(x, 2) for x in np.linspace(0, 1, 21)]
+# Bump when the meaning of cached logits or of the saved config changes.
+# 2: numeric context in cache keys; tie-aware thresholds (None = abstain on all);
+#    macro-F1 over the fixed 100-label universe.
+INFERENCE_SCHEMA = 2
 CONFIDENCE_NOTE = ("Confidence = calibrated score that the clause TYPE is correct. It is not a "
                    "probability that the clause is legally valid, enforceable or risk-free.")
 
@@ -49,12 +52,34 @@ def bert_fingerprint() -> dict:
         "tokenizer_sha256": sha256_files([BERT_DIR / "tokenizer.json", BERT_DIR / "tokenizer_config.json"]),
         "max_length": tcfg["max_length"],
         "truncation": "keep first max_length tokens",
-        "inference_dtype": "bfloat16 autocast on GPU (mps/cuda), float32 on CPU",
     }
+
+
+def bert_numeric_context() -> dict:
+    """How BERT logits are computed HERE. Same weights + different context = different numbers.
+
+    Policy: cached logits are reused only if this context is identical; moving
+    between CPU and MPS/CUDA (or upgrading torch/transformers) recomputes them.
+    Measured effect of CPU (float32) vs M3 GPU (bfloat16): max |dp| 0.012 on BERT
+    probabilities, no label change on 200 test clauses.
+    """
+    import torch
+    import transformers
+
+    dev = get_device().type
+    return {"backend": dev, "precision": "float32" if dev == "cpu" else "bfloat16 autocast",
+            "torch": torch.__version__, "transformers": transformers.__version__,
+            "batching": "length-sorted batches of 64, padded to a multiple of 64"}
 
 
 def tfidf_fingerprint() -> dict:
     return {"joblib_sha256": sha256_file(TFIDF_PATH)}
+
+
+def tfidf_numeric_context() -> dict:
+    import sklearn
+
+    return {"backend": "cpu", "precision": "float64", "sklearn": sklearn.__version__}
 
 
 def split_fingerprint(split: str) -> dict:
@@ -102,7 +127,9 @@ def split_logits(split: str, which: str) -> tuple[np.ndarray, np.ndarray]:
     the cache is recomputed instead of being reused.
     """
     fp = bert_fingerprint() if which == "bert" else tfidf_fingerprint()
-    meta = {"model": which, **fp, "data": split_fingerprint(split)}
+    ctx = bert_numeric_context() if which == "bert" else tfidf_numeric_context()
+    meta = {"schema": INFERENCE_SCHEMA, "model": which, **fp, "numeric_context": ctx,
+            "data": split_fingerprint(split)}
     X, y = split_arrays(split)
     model_cls = _Bert if which == "bert" else _Tfidf
     z = cached_npz(ARTIFACTS / f"{which}_{split}_logits.npz", meta,
@@ -120,31 +147,37 @@ def fit_inference_config() -> dict:
 
     T_bert, T_tfidf = fit_temperature(lb, yv), fit_temperature(lt, yv)
     pb, pt = softmax(lb, T_bert), softmax(lt, T_tfidf)
-    val_f1 = {w: float(f1_score(yv, (w * pb + (1 - w) * pt).argmax(1), average="macro"))
-              for w in WEIGHT_GRID}
+    val_f1 = {w: macro_f1(yv, (w * pb + (1 - w) * pt).argmax(1)) for w in WEIGHT_GRID}
     w = max(WEIGHT_GRID, key=lambda k: val_f1[k])  # first maximum, same rule as before (np.argmax)
     pe = w * pb + (1 - w) * pt
     probs = {"bert": pb, "tfidf": pt, "ensemble": pe}
-    thresholds = {v: threshold_for_precision(p, yv, TARGET_ACCURACY) for v, p in probs.items()}
+    details = {v: select_threshold(p, yv, TARGET_ACCURACY) for v, p in probs.items()}
+    thresholds = {v: d["threshold"] for v, d in details.items()}
 
     cfg = {
+        "schema": INFERENCE_SCHEMA,
         "created_from": "validation split only (test never used to choose a parameter)",
+        "macro_f1_definition": MACRO_F1_DEFINITION,
         "labels": names,
         "labels_sha256": labels_fingerprint(names),
         "data": {"dataset": "coastalcph/lex_glue/ledgar", "validation": split_fingerprint("validation")},
         "bert": {"dir": str(BERT_DIR.relative_to(ARTIFACTS.parent)), **bert_fingerprint(),
+                 "numeric_context_of_fit": bert_numeric_context(),
                  "base_model": load_json(BERT_DIR / "training_config.json")["model_name"],
                  "temperature": T_bert},
         "tfidf": {"path": str(TFIDF_PATH.relative_to(ARTIFACTS.parent)), **tfidf_fingerprint(),
-                  "temperature": T_tfidf},
+                  "numeric_context_of_fit": tfidf_numeric_context(), "temperature": T_tfidf},
         "ensemble": {"weight_bert": w, "weight_tfidf": round(1 - w, 2),
                      "rule": "p = w * softmax(bert/T_bert) + (1-w) * softmax(tfidf/T_tfidf)",
                      "weight_chosen_by": "validation macro-F1 over grid", "val_macro_f1_by_weight": val_f1},
         "abstention": {
-            "rule": "answer only if max calibrated score >= threshold of THAT variant",
+            "rule": ("answer only if max calibrated score >= threshold of THAT variant; the threshold "
+                     "is the lowest whole tie group whose accepted set reaches the target; "
+                     "threshold null = no non-empty set reaches it -> always abstain"),
             "target_validation_accuracy": TARGET_ACCURACY,
             "thresholds": thresholds,
-            "validation_coverage": {v: float((p.max(1) >= thresholds[v]).mean()) for v, p in probs.items()},
+            "threshold_details_on_validation": details,
+            "validation_coverage": {v: float(answers(p.max(1), thresholds[v]).mean()) for v, p in probs.items()},
         },
         "note": CONFIDENCE_NOTE,
     }
@@ -191,9 +224,22 @@ class Predictor:
         cfg_labels = [load_json(BERT_DIR / "config.json")["id2label"][str(i)] for i in range(len(self.names))]
         if cfg_labels != self.names:
             problems.append("bert id2label order")
+        if self.cfg.get("schema") != INFERENCE_SCHEMA:
+            problems.append(f"config schema {self.cfg.get('schema')} != {INFERENCE_SCHEMA}")
         if problems:
             raise ConfigMismatchError("inference config does not match current artifacts: "
                                       + ", ".join(problems) + ". Re-run `evaluate` to refit it.")
+
+    def numeric_context_warning(self) -> str | None:
+        """Thresholds were fitted on logits computed in a given context (e.g. mps/bf16).
+        Running elsewhere (e.g. CPU/float32) is allowed but probabilities differ slightly."""
+        fit, now = self.cfg["bert"].get("numeric_context_of_fit", {}), bert_numeric_context()
+        keys = ("backend", "precision")
+        if any(fit.get(k) != now[k] for k in keys):
+            return (f"note: thresholds were fitted with BERT on {fit.get('backend')}/{fit.get('precision')}; "
+                    f"now running on {now['backend']}/{now['precision']} (measured CPU vs M3 GPU: "
+                    f"max |dp| 0.012 on BERT probabilities). Decisions near a threshold may differ.")
+        return None
 
     @cached_property
     def _bert(self) -> _Bert:
@@ -203,7 +249,8 @@ class Predictor:
     def _tfidf(self) -> _Tfidf:
         return _Tfidf()
 
-    def threshold(self, variant: str) -> float:
+    def threshold(self, variant: str) -> float | None:
+        """None = no threshold reached the validation target: this variant always abstains."""
         return self.cfg["abstention"]["thresholds"][variant]
 
     def probs_from_logits(self, bert_logits: np.ndarray, tfidf_logits: np.ndarray) -> dict[str, np.ndarray]:
@@ -222,11 +269,14 @@ class Predictor:
         return {v: p[v] for v in variants}
 
     def decide(self, probs: np.ndarray, variant: str, k: int = 3) -> list[Prediction]:
+        if not 1 <= k <= len(self.names):
+            raise ValueError(f"k must be between 1 and {len(self.names)}, got {k}")
         thr = self.threshold(variant)
         out = []
         for row in probs:
-            top = np.argsort(-row)[:k]
-            out.append(Prediction(variant, self.names[top[0]], float(row[top[0]]), bool(row[top[0]] < thr),
+            top = np.argsort(-row, kind="stable")[:k]
+            conf = float(row[top[0]])
+            out.append(Prediction(variant, self.names[top[0]], conf, not bool(answers(conf, thr)),
                                   [(self.names[i], float(row[i])) for i in top]))
         return out
 
@@ -243,22 +293,31 @@ def cli_classify(argv=None) -> None:
                                 description="Predict the clause type of one or more clauses.")
     p.add_argument("clause", nargs="*", help="clause text (omit to read one clause from stdin)")
     p.add_argument("--variant", choices=VARIANTS, default="ensemble")
-    p.add_argument("-k", type=int, default=3, help="number of candidate labels to show")
-    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.add_argument("-k", type=int, default=3, help="number of candidate labels to show (1-100)")
+    p.add_argument("--json", action="store_true", help="machine-readable output on stdout (logs on stderr)")
     a = p.parse_args(argv)
-    texts = [" ".join(a.clause)] if a.clause else [sys.stdin.read().strip()]
+    if not 1 <= a.k <= 100:
+        p.error("-k must be between 1 and 100")
+    texts = [" ".join(a.clause).strip()] if a.clause else [sys.stdin.read().strip()]
     if not texts[0]:
         p.error("empty clause")
     pred = Predictor()
+    warn = pred.numeric_context_warning()
+    if warn:
+        print(warn, file=sys.stderr)
+    thr = pred.threshold(a.variant)
     for t, r in zip(texts, pred.predict(texts, a.variant, a.k)):
         if a.json:
             print(json.dumps({"clause": t, "variant": r.variant, "label": r.label, "confidence": r.confidence,
-                              "abstain": r.abstain, "threshold": pred.threshold(a.variant),
+                              "abstain": r.abstain, "threshold": thr,
+                              "threshold_note": (None if thr is not None else
+                                                 "no threshold reached the validation target: always abstains"),
                               "top": r.top, "note": CONFIDENCE_NOTE}, indent=2))
             continue
         verdict = ("ABSTAIN - below the confidence threshold, send to a lawyer" if r.abstain
                    else "answered (confidence above threshold)")
-        print(f"variant      : {r.variant}  (threshold {pred.threshold(a.variant):.3f}, chosen on validation)")
+        thr_txt = f"{thr:.3f}" if thr is not None else "none reached the target: always abstains"
+        print(f"variant      : {r.variant}  (threshold {thr_txt}, chosen on validation)")
         print(f"predicted    : {r.label}  (confidence {r.confidence:.3f})")
         print(f"decision     : {verdict}")
         print("candidates   : " + " | ".join(f"{lbl} {s:.3f}" for lbl, s in r.top))

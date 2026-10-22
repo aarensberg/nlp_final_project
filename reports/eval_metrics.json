@@ -6,6 +6,8 @@
     "tfidf": "TF-IDF + logistic regression"
   },
   "parameters": "fitted on validation, see reports/inference_config.json",
+  "macro_f1_definition": "mean over the fixed universe of 100 labels; F1_c = 2TP/(n_true+n_pred); F1_c = 1 when label c has neither true nor predicted examples",
+  "bootstrap": "1000 resamples of test CLAUSES (no contract id available, so intervals ignore within-contract correlation and are likely somewhat too narrow)",
   "test_n": 10000,
   "test_n_without_train_duplicates": 9718,
   "variants": {
@@ -17,13 +19,15 @@
         "micro_f1": 0.8843,
         "macro_f1": 0.8284264197285587,
         "weighted_f1": 0.8800999630391132,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100,
         "micro_f1_95ci": [
           0.8777975,
           0.8906
         ],
         "macro_f1_95ci": [
-          0.8156518912480032,
-          0.8371692555461085
+          0.815661154871635,
+          0.8376397539097291
         ]
       },
       "validation": {
@@ -31,14 +35,18 @@
         "accuracy": 0.8878,
         "micro_f1": 0.8878,
         "macro_f1": 0.8290460462469723,
-        "weighted_f1": 0.8842296314751215
+        "weighted_f1": 0.8842296314751215,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 99
       },
       "test_without_train_duplicates": {
         "n": 9718,
         "accuracy": 0.8811483844412431,
         "micro_f1": 0.8811483844412431,
         "macro_f1": 0.8249079358907382,
-        "weighted_f1": 0.8767665325006465
+        "weighted_f1": 0.8767665325006465,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100
       },
       "macro_f1_by_frequency_bucket": {
         "head": 0.9038858978042552,
@@ -350,28 +358,34 @@
         "micro_f1": 0.8635,
         "macro_f1": 0.7627145791964226,
         "weighted_f1": 0.8532964439290581,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100,
         "micro_f1_95ci": [
           0.8565975,
           0.8702099999999999
         ],
         "macro_f1_95ci": [
           0.7519563296151334,
-          0.7746595619640879
+          0.7763138909210682
         ]
       },
       "validation": {
         "n": 10000,
         "accuracy": 0.8637,
         "micro_f1": 0.8637,
-        "macro_f1": 0.7757579395635769,
-        "weighted_f1": 0.8542183755917314
+        "macro_f1": 0.778000360167941,
+        "weighted_f1": 0.8542183755917314,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 99
       },
       "test_without_train_duplicates": {
         "n": 9718,
         "accuracy": 0.8613912327639432,
         "micro_f1": 0.8613912327639432,
         "macro_f1": 0.7610331816590142,
-        "weighted_f1": 0.8510434300250292
+        "weighted_f1": 0.8510434300250292,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100
       },
       "macro_f1_by_frequency_bucket": {
         "head": 0.8962986328828663,
@@ -683,13 +697,15 @@
         "micro_f1": 0.877,
         "macro_f1": 0.8219376759941999,
         "weighted_f1": 0.8733171991864076,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100,
         "micro_f1_95ci": [
           0.8702,
           0.8837
         ],
         "macro_f1_95ci": [
-          0.8089008973964639,
-          0.8303455954898138
+          0.809267999763109,
+          0.8311819347594778
         ]
       },
       "validation": {
@@ -697,14 +713,18 @@
         "accuracy": 0.8797,
         "micro_f1": 0.8797,
         "macro_f1": 0.8188420577829894,
-        "weighted_f1": 0.8767967919771598
+        "weighted_f1": 0.8767967919771598,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 99
       },
       "test_without_train_duplicates": {
         "n": 9718,
         "accuracy": 0.873636550730603,
         "micro_f1": 0.873636550730603,
         "macro_f1": 0.8182648621589776,
-        "weighted_f1": 0.8697962716769612
+        "weighted_f1": 0.8697962716769612,
+        "n_labels_in_universe": 100,
+        "n_labels_present_in_truth": 100
       },
       "macro_f1_by_frequency_bucket": {
         "head": 0.8978659839671288,
@@ -892,9 +912,9 @@
         "ece_test": 0.024207060942427718
       },
       "abstention": {
-        "threshold_chosen_on_validation": 0.7561507298557084,
+        "threshold_chosen_on_validation": 0.7562073504192992,
         "validation_target_correct_rate": 0.95,
-        "validation_coverage": 0.8328,
+        "validation_coverage": 0.8326,
         "test_coverage": 0.8321,
         "test_n_handled": 8321,
         "test_correct_rate_among_handled": 0.9459199615430838,
@@ -1018,8 +1038,8 @@
       ],
       "delta_macro_f1_points": 0.6488743734358815,
       "delta_macro_f1_95ci_points": [
-        0.31357781823570713,
-        1.0022354388883363
+        0.3126349774525497,
+        1.0010994003240266
       ],
       "mcnemar": {
         "ensemble_right_tfidf_wrong": 106,
@@ -1036,7 +1056,7 @@
       ],
       "delta_macro_f1_points": 6.571184053213608,
       "delta_macro_f1_95ci_points": [
-        5.2573781134056405,
+        5.204804332271585,
         7.512305277537075
       ],
       "mcnemar": {
@@ -1055,7 +1075,7 @@
       "delta_macro_f1_points": -5.922309679777726,
       "delta_macro_f1_95ci_points": [
         -6.880581950757625,
-        -4.544017175623324
+        -4.498577003867093
       ],
       "mcnemar": {
         "bert_right_tfidf_wrong": 362,

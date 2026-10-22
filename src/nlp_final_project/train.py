@@ -129,7 +129,8 @@ def predict_logits(model, encodings, pad_id, device, batch_size=64, desc="predic
     model.eval()
     ds = ClauseDataset(encodings, np.zeros(len(encodings), dtype=int))
     batches = sorted_batches([len(e) for e in encodings], batch_size)
-    loader = DataLoader(ds, batch_sampler=batches, collate_fn=make_collate(pad_id))
+    loader = DataLoader(ds, batch_sampler=batches, collate_fn=make_collate(pad_id),
+                        generator=torch.Generator().manual_seed(0))  # keep the global RNG untouched
     out = np.zeros((len(encodings), model.config.num_labels), dtype=np.float32)
     for b_idx, batch in zip(batches, tqdm(loader, desc=desc, leave=False)):
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type != "cpu"):
@@ -224,6 +225,19 @@ def train(cfg: TrainConfig) -> dict:
         id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
     ).to(device)
 
+    def save_best():
+        model.save_pretrained(cfg.output_dir)
+        tok.save_pretrained(cfg.output_dir)
+        save_json(asdict(cfg), Path(cfg.output_dir) / "training_config.json")
+
+    return fit(cfg, model, enc_tr, ytr, enc_va, yva, tok.pad_token_id, device, save_best)
+
+
+def fit(cfg: TrainConfig, model, enc_tr: list[list[int]], ytr: np.ndarray, enc_va: list[list[int]],
+        yva: np.ndarray, pad_id: int, device: torch.device, save_best=None,
+        stop_after_steps: int | None = None) -> dict:
+    """The training loop proper (separated from data/model loading so it can be tested
+    on a tiny local model). `stop_after_steps` simulates an interruption (tests only)."""
     # No weight decay on biases and LayerNorm weights (standard BERT recipe).
     no_decay = ("bias", "LayerNorm.weight", "layernorm", "norm.weight")
     groups = [
@@ -236,7 +250,7 @@ def train(cfg: TrainConfig) -> dict:
     steps_per_epoch = math.ceil(len(enc_tr) / cfg.batch_size)
     total = steps_per_epoch * cfg.epochs
     sched = get_linear_schedule_with_warmup(optim, int(cfg.warmup_ratio * total), total)
-    collate = make_collate(tok.pad_token_id)
+    collate = make_collate(pad_id)
     lengths = [len(e) for e in enc_tr]
     ds_tr = ClauseDataset(enc_tr, ytr)
 
@@ -280,7 +294,11 @@ def train(cfg: TrainConfig) -> dict:
         st["epoch"] = epoch
         model.train()
         batches = bucketed_batches(lengths, cfg.batch_size, cfg.seed + epoch)[st["step_in_epoch"]:]
-        loader = DataLoader(ds_tr, batch_sampler=batches, collate_fn=collate)
+        # A dedicated generator: creating a DataLoader iterator otherwise draws a seed from the
+        # GLOBAL torch RNG, so a resumed run (which creates one more iterator) would desynchronise
+        # dropout from the continuous run.
+        loader = DataLoader(ds_tr, batch_sampler=batches, collate_fn=collate,
+                            generator=torch.Generator().manual_seed(cfg.seed + epoch))
         pbar = tqdm(loader, desc=f"epoch {epoch + 1}/{cfg.epochs}", initial=st["step_in_epoch"],
                     total=steps_per_epoch)
         for batch in pbar:
@@ -303,10 +321,13 @@ def train(cfg: TrainConfig) -> dict:
                 report("training")
             if st["step"] % cfg.ckpt_every == 0:
                 save_checkpoint()
+            if stop_after_steps is not None and st["step"] >= stop_after_steps:
+                log["interrupted_at_step"] = st["step"]
+                return log
 
         report("validating")
-        logits = predict_logits(model, enc_va, tok.pad_token_id, device, cfg.eval_batch_size, "validate")
-        m = core_metrics(yva, logits.argmax(1))
+        logits = predict_logits(model, enc_va, pad_id, device, cfg.eval_batch_size, "validate")
+        m = core_metrics(yva, logits.argmax(1), n_labels=logits.shape[1])
         m.update(epoch=epoch + 1, train_loss=st["running"] / max(st["seen"], 1),
                  elapsed_min=(base + time.time() - t_start) / 60)
         log["epochs"].append(m)
@@ -316,9 +337,8 @@ def train(cfg: TrainConfig) -> dict:
         improved = m["macro_f1"] > st["best"]
         if improved:
             st["best"], st["bad_epochs"] = m["macro_f1"], 0
-            model.save_pretrained(cfg.output_dir)
-            tok.save_pretrained(cfg.output_dir)
-            save_json(asdict(cfg), Path(cfg.output_dir) / "training_config.json")
+            if save_best is not None:
+                save_best()
         else:
             st["bad_epochs"] += 1
         save_checkpoint()

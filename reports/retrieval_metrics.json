@@ -1,12 +1,15 @@
 {
   "bank_size": 59080,
   "embedding_model": "BAAI/bge-small-en-v1.5",
+  "ranking_rules": "filters first; dense ranks all eligible docs, BM25 only docs with score > 0; RRF(k=60, depth=200); unranked docs never returned; ties broken by bank index",
+  "label_approximation": "Relevance is approximated by the LEDGAR label: a hit is 'relevant' iff its label is accepted. This ignores whether the clause actually answers the question (e.g. the requested notice period) and penalises correct clauses filed under a near-synonym label not listed.",
   "clause_to_clause": {
     "dense": {
       "p@1": 0.7655453618756372,
       "p@5": 0.6852191641182466,
       "p@10": 0.6480122324159022,
       "mrr@10": 0.8136635762018025,
+      "n_returned": 10.0,
       "n_queries": 981
     },
     "bm25": {
@@ -14,13 +17,15 @@
       "p@5": 0.6841997961264017,
       "p@10": 0.6458715596330274,
       "mrr@10": 0.81714763037393,
+      "n_returned": 10.0,
       "n_queries": 981
     },
     "hybrid": {
-      "p@1": 0.7747196738022426,
-      "p@5": 0.7019367991845055,
+      "p@1": 0.7737003058103975,
+      "p@5": 0.7011213047910295,
       "p@10": 0.663506625891947,
-      "mrr@10": 0.8240995582738702,
+      "mrr@10": 0.8235558953448862,
+      "n_returned": 10.0,
       "n_queries": 981
     }
   },
@@ -59,46 +64,62 @@
     ],
     [
       "Enforcements",
-      0.26
+      0.25
     ],
     [
       "Powers",
       0.26
     ]
   ],
-  "clause_to_clause_protocol": "Queries: test clauses sampled per class (up to 10 per class -> 981 queries; classes with fewer test clauses contribute all of them). Bank: de-duplicated train split. A retrieved clause is relevant iff it has the same LEDGAR label as the query. Exact duplicates of the query (normalised text) are removed from the results before scoring.",
+  "clause_to_clause_protocol": "Queries: test clauses sampled per class (up to 10 per class -> 981 queries; classes with fewer test clauses contribute all of them). Bank: de-duplicated train split. A retrieved clause is relevant iff it has the same LEDGAR label as the query. Exact duplicates of the query (normalised text) are removed from the results before scoring. p@k has a fixed denominator k.",
   "questions": [
     {
       "mode": "dense",
       "p@1": 0.85,
-      "p@10": 0.875,
-      "period_match@10 (constraint questions)": 0.675,
+      "precision_at_10": 0.875,
+      "precision_among_returned": 0.875,
+      "mean_n_returned": 10.0,
+      "n_questions_with_fewer_than_10": 0,
+      "duration_mention_rate_at_10": 0.675,
+      "duration_mention_rate_among_returned": 0.675,
       "n_constraint_questions": 4
     },
     {
       "mode": "bm25",
       "p@1": 0.825,
-      "p@10": 0.8299999999999998,
-      "period_match@10 (constraint questions)": 0.9,
+      "precision_at_10": 0.8299999999999998,
+      "precision_among_returned": 0.8299999999999998,
+      "mean_n_returned": 10.0,
+      "n_questions_with_fewer_than_10": 0,
+      "duration_mention_rate_at_10": 0.9,
+      "duration_mention_rate_among_returned": 0.9,
       "n_constraint_questions": 4
     },
     {
       "mode": "hybrid",
       "p@1": 0.925,
-      "p@10": 0.8925000000000001,
-      "period_match@10 (constraint questions)": 0.925,
+      "precision_at_10": 0.8925000000000001,
+      "precision_among_returned": 0.8925000000000001,
+      "mean_n_returned": 10.0,
+      "n_questions_with_fewer_than_10": 0,
+      "duration_mention_rate_at_10": 0.925,
+      "duration_mention_rate_among_returned": 0.925,
       "n_constraint_questions": 4
     },
     {
       "mode": "hybrid + period filter",
-      "p@1": 0.925,
-      "p@10": 0.89,
-      "period_match@10 (constraint questions)": 1.0,
+      "p@1": 0.95,
+      "precision_at_10": 0.89,
+      "precision_among_returned": 0.89,
+      "mean_n_returned": 10.0,
+      "n_questions_with_fewer_than_10": 0,
+      "duration_mention_rate_at_10": 1.0,
+      "duration_mention_rate_among_returned": 1.0,
       "n_constraint_questions": 4
     }
   ],
   "n_questions": 40,
-  "questions_protocol": "40 hand-written questions (fixed before results), hybrid/dense/BM25 top-10. Relevant iff the hit's LEDGAR label is in the accepted list for that question. p@10 is computed over the hits returned (fewer than 10 if the period filter leaves fewer). period_match@10 = share of hits that MENTION the requested number of days, whatever its legal role.",
+  "questions_protocol": "40 hand-written questions, fixed before any result was seen and unchanged since (so a re-run is a non-regression check, not an independent validation). Top-10 per mode. precision_at_10 divides by 10 (missing hits count as misses); precision_among_returned divides by the number of hits returned. duration_mention_rate = share of hits that MENTION the requested number of days, whatever its legal role: it does not validate a notice period. Relevance is approximated by the LEDGAR label: a hit is 'relevant' iff its label is accepted. This ignores whether the clause actually answers the question (e.g. the requested notice period) and penalises correct clauses filed under a near-synonym label not listed.",
   "example": {
     "query": "show me termination clauses with a 30-day notice period",
     "hits": [
@@ -119,8 +140,8 @@
         "text": "This Agreement will terminate upon the expiration of the Term.\u00a0\u00a0The Company may terminate the Agreement with or without Cause (as defined below) , upon providing\u00a0\u00a0Consultant with written notice of such termination pursuant to Section\u00a0 13.G of this Agreement (the \u201c Termination Notice \u201d) . \u00a0\u00a0In the ev"
       },
       {
-        "label": "Notices",
-        "text": "It shall be a condition precedent to XOMA\u2019s right to terminate Employee\u2019s employment for the reasons set forth in Sections 7(d)(ii) or (iii) of this Agreement that (i) XOMA shall first have given Employee written notice stating with specificity the reason for the termination (\u201c Breach \u201d) and (ii) if"
+        "label": "Disability",
+        "text": "If the Company determines in good faith that the Executive has incurred a Disability, the Company shall give the Executive a minimum of thirty (30)\u00a0days\u2019 written notice of its intention to terminate the Executive\u2019s employment after the 180\u00a0day period referenced in Section\u00a01(i) (the \u201cDisability Notic"
       }
     ]
   }

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Callable
 
@@ -52,11 +53,13 @@ class StaleCacheError(RuntimeError):
 
 
 def cached_npz(path: Path, meta: dict, compute: Callable[[], dict[str, np.ndarray]],
-               log: Callable[[str], None] = print) -> dict[str, np.ndarray]:
+               log: Callable[[str], None] | None = None) -> dict[str, np.ndarray]:
     """Load `path` if its stored meta equals `meta`, else recompute and overwrite.
 
     A cache without meta (written by an older version) is treated as stale.
+    Messages go to stderr so that machine-readable stdout stays clean.
     """
+    log = log or (lambda m: print(m, file=sys.stderr))
     if path.exists():
         z = np.load(path, allow_pickle=False)
         stored = json.loads(str(z["__meta__"])) if "__meta__" in z.files else None

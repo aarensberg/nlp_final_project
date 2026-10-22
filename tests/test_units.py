@@ -147,3 +147,141 @@ def test_resume_refuses_changed_epochs():
 def test_resume_refuses_checkpoint_without_config():
     with pytest.raises(ResumeError, match="no saved configuration"):
         check_resume_compatible(None, TrainConfig())
+
+
+# ------------------------------------------------- abstention thresholds ----
+from nlp_final_project.metrics import answers, macro_f1, select_threshold  # noqa: E402
+
+
+def _probs(conf):
+    conf = np.asarray(conf, dtype=float)
+    return np.stack([conf, 1 - conf], 1)  # argmax = class 0 whenever conf >= 0.5
+
+
+def test_threshold_accepts_whole_tie_groups():
+    # 0.95 correct; four clauses at 0.9 (two correct, two wrong); 0.6 wrong. Target 0.75.
+    # Old code cut inside the 0.9 group and returned 0.9, whose accepted set is 3/5 = 0.6.
+    probs = _probs([0.95, 0.9, 0.9, 0.9, 0.9, 0.6])
+    y = np.array([0, 0, 0, 1, 1, 1])
+    r = select_threshold(probs, y, 0.75)
+    acc = answers(probs.max(1), r["threshold"])
+    assert r["threshold"] == 0.95 and acc.sum() == 1 == r["n_accepted"]
+    assert (probs.argmax(1)[acc] == y[acc]).mean() >= 0.75
+
+
+def test_threshold_impossible_target_abstains_even_at_confidence_one():
+    probs = np.array([[1.0, 0.0], [0.6, 0.4]])
+    r = select_threshold(probs, np.array([1, 1]), 0.95)
+    assert r == {"target": 0.95, "feasible": False, "threshold": None, "n_accepted": 0,
+                 "coverage": 0.0, "accuracy_accepted": None}
+    assert not answers(probs.max(1), r["threshold"]).any()  # 1.0 is NOT accepted
+
+
+def test_threshold_confidence_one_group_can_be_accepted():
+    probs = _probs([1.0, 1.0, 0.7])
+    r = select_threshold(probs, np.array([0, 0, 1]), 0.95)
+    assert r["threshold"] == 1.0 and r["n_accepted"] == 2 and r["accuracy_accepted"] == 1.0
+
+
+def test_threshold_all_correct_answers_everything():
+    probs = _probs([0.9, 0.8, 0.55])
+    r = select_threshold(probs, np.array([0, 0, 0]), 0.95)
+    assert r["threshold"] == 0.55 and r["coverage"] == 1.0
+
+
+def test_threshold_empty_input_and_zero_coverage():
+    r = select_threshold(np.zeros((0, 2)), np.zeros(0, dtype=int), 0.95)
+    assert r["threshold"] is None and r["coverage"] == 0.0 and r["accuracy_accepted"] is None
+    assert answers(np.array([0.99, 0.5]), None).tolist() == [False, False]
+
+
+# ---------------------------------------------------------------- macro-F1 ----
+def test_macro_f1_fixed_universe_when_a_class_disappears():
+    y = np.array([0, 0, 1, 2])
+    p = np.array([0, 0, 1, 1])
+    full = macro_f1(y, p, n_labels=3)               # F1 = 1, 2/3, 0
+    assert full == pytest.approx((1 + 2 / 3 + 0) / 3)
+    sub = macro_f1(y[:3], p[:3], n_labels=3)       # class 2 vanished from truth AND predictions
+    assert sub == pytest.approx((1 + 1 + 1) / 3)   # denominator stays 3; absent class counts 1
+    assert macro_f1(y[:3], p[:3], n_labels=3, absent_value=0.0) == pytest.approx(2 / 3)
+    from sklearn.metrics import f1_score
+    # sklearn's implicit universe silently drops the class -> different denominator (2)
+    assert f1_score(y[:3], p[:3], average="macro") == pytest.approx(1.0)
+
+
+def test_macro_f1_matches_sklearn_when_all_labels_present():
+    from sklearn.metrics import f1_score
+    rng = np.random.default_rng(0)
+    y = np.r_[np.arange(10), rng.integers(0, 10, 300)]
+    p = np.where(rng.random(310) < 0.7, y, rng.integers(0, 10, 310))
+    assert macro_f1(y, p, n_labels=10) == pytest.approx(f1_score(y, p, average="macro"))
+
+
+# ------------------------------------------------------- filtered ranking ----
+def _index(texts, emb, query_vec):
+    idx = ClauseIndex(texts, np.zeros(len(texts), dtype=int), np.asarray(emb, dtype=np.float32))
+    idx.names = ["X"]
+    idx.embed = lambda qs, is_question: np.tile(np.asarray(query_vec, dtype=np.float32), (len(qs), 1))
+    return idx
+
+
+def test_filtered_docs_are_ranked_among_eligible_only():
+    # 300 fillers beat the only eligible clause on dense and it shares no BM25 term with the query.
+    # Old behaviour: RRF over the whole bank gave it 0 and it was returned with an uninformative 0.
+    # New behaviour: rankings are restricted to eligible docs, so it gets a real (positive) rank.
+    texts = [f"governing law clause number {i}" for i in range(300)] + ["Notice of forty-five days is required."]
+    emb = np.zeros((301, 4)); emb[:300, 0] = 1; emb[300, 1] = 1
+    idx = _index(texts, emb, [1, 0, 0, 0])
+    d = idx.search_detailed("governing law with a 45-day period", k=5, mode="hybrid", depth=200)
+    assert d["n_eligible"] == 1 and d["n_returned"] == 1
+    assert d["hits"][0].score > 0
+
+
+def test_unranked_eligible_docs_are_not_padded_in():
+    # 3 eligible docs, no BM25 overlap with the query, depth 1: only the dense rank-1 doc is ranked.
+    texts = ["alpha 30 days", "beta 30 days", "gamma 30 days", "other text"]
+    emb = np.array([[1, 0, 0, 0], [0.9, 0.1, 0, 0], [0.8, 0.2, 0, 0], [0, 0, 0, 1]])
+    idx = _index(texts, emb, [1, 0, 0, 0])
+    d = idx.search_detailed("zeta 30-day", k=5, mode="hybrid", depth=1)
+    assert d["n_eligible"] == 3 and d["n_ranked"] == 1
+    assert [h.text for h in d["hits"]] == ["alpha 30 days"]
+
+
+def test_corpus_smaller_than_rrf_depth():
+    texts = ["terminate on notice", "governing law", "payment terms"]
+    idx = _index(texts, np.eye(3, 4), [1, 0, 0, 0])
+    hits = idx.search("terminate", k=10, mode="hybrid", depth=200)
+    assert 1 <= len(hits) <= 3 and hits[0].text == "terminate on notice"
+
+
+def test_fewer_than_k_candidates_and_no_candidate():
+    texts = ["terminate on 30 days notice", "pay within 30 days", "terminate on 60 days notice", "law"]
+    idx = _index(texts, np.eye(4, 4), [1, 0, 0, 0])
+    d = idx.search_detailed("termination with 30 days notice", k=10, mode="hybrid")
+    assert d["n_eligible"] == 2 and d["n_returned"] == 2
+    d0 = idx.search_detailed("termination with 45 days notice", k=10, mode="hybrid")
+    assert d0["n_eligible"] == 0 and d0["hits"] == []
+
+
+def test_ties_are_broken_by_bank_position():
+    texts = ["same text", "same text", "same text"]
+    idx = _index(texts, np.ones((3, 4)) / 2, [0.5, 0.5, 0.5, 0.5])
+    for mode in ("dense", "bm25", "hybrid"):
+        assert [h.text for h in idx.search("same text", k=3, mode=mode)] == texts
+        ids = idx.top(*idx.scored(mode, idx.dense_scores(np.ones(4) / 2), idx.bm25_scores("same text")), 3)
+        assert ids == [0, 1, 2]
+
+
+def test_multiple_durations_any_or_all():
+    texts = ["notice of 30 days", "cure within 10 days", "10 days to cure and 30 days notice", "law"]
+    idx = _index(texts, np.eye(4, 4), [1, 1, 1, 1])
+    any_ = idx.search_detailed("10 days cure or 30 days notice", k=10, mode="dense", period_match="any")
+    all_ = idx.search_detailed("10 days cure or 30 days notice", k=10, mode="dense", period_match="all")
+    assert any_["n_eligible"] == 3 and all_["n_eligible"] == 1
+    assert [h.text for h in all_["hits"]] == ["10 days to cure and 30 days notice"]
+
+
+def test_search_rejects_bad_k():
+    idx = _index(["a"], np.eye(1, 4), [1, 0, 0, 0])
+    with pytest.raises(ValueError):
+        idx.search("a", k=0)

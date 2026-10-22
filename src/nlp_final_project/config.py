@@ -10,7 +10,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-ROOT = Path(__file__).resolve().parents[2]
+# NLP_PROJECT_ROOT lets tests run the CLI against an empty folder.
+ROOT = Path(os.environ.get("NLP_PROJECT_ROOT") or Path(__file__).resolve().parents[2])
 ARTIFACTS = ROOT / "artifacts"  # model weights, embeddings, predictions (git-ignored)
 REPORTS = ROOT / "reports"  # metrics JSON + markdown (committed)
 FIGURES = REPORTS / "figures"
@@ -25,9 +26,6 @@ CLASSIFIER_MODEL = "nlpaueb/legal-bert-base-uncased"
 CLASSIFIER_REVISION = "15b570cbf88259610b082a167dacc190124f60f6"
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 EMBEDDING_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
-
-for _d in (ARTIFACTS, REPORTS, FIGURES):
-    _d.mkdir(parents=True, exist_ok=True)
 
 
 def set_seed(seed: int = SEED) -> None:
