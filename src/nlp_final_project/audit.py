@@ -1,100 +1,40 @@
-"""Bias and failure-mode audit of the classifier and the retriever.
+"""Bias and failure-mode audit of the classifier (3 variants) and of the retriever.
 
-1. Slice performance: contract family, pronouns, jurisdiction, clause length,
-   class frequency. Raw gaps are confounded by the clause-type mix of each slice,
-   so we also report the gap *after* adjusting for that mix.
-2. Counterfactual invariance: edits that must not change the clause type
-   (gender of pronouns, US -> European jurisdiction, $ -> EUR, British spelling,
-   European party names, typos). We measure how often the prediction flips.
-3. Out-of-scope inputs: clause types LEDGAR does not have (GDPR, force majeure),
-   non-English clauses, non-legal text. Does the abstention threshold catch them?
-4. Retrieval: quality per slice, exposure of each contract family in results,
-   and stability of results under the gender swap.
+The shipped variant is the combination (`ensemble`); BERT alone and TF-IDF are
+reported next to it. Each variant is always used with ITS OWN validation-chosen
+abstention threshold (reports/inference_config.json).
+
+1. Slices of the test set: contract family, pronouns, jurisdiction, clause
+   length, class frequency. Groups are KEYWORD PROXIES computed from the clause
+   text (see slices.py), not metadata and not certified personal attributes.
+   Raw gaps are confounded by each group's clause-type mix, so we also report the
+   accuracy expected from that mix; the adjusted gap is descriptive only. Small
+   groups (wide intervals) support no conclusion about fairness or discrimination.
+2. Counterfactual edits that should not change the clause TYPE (perturb.py).
+   Some edits (jurisdiction, currency) DO change legal content: a stable type
+   does not mean the legal effect is preserved.
+3. Out-of-scope inputs (types LEDGAR lacks, French/German text, non-legal text).
+   A confidence threshold does not guarantee they are caught.
+4. Retrieval: quality per contract family, cross-family exposure, stability
+   under the gender swap, pronoun make-up of the clause bank.
 
 Run: uv run nlp-final-project audit
 """
 
 from __future__ import annotations
 
-import re
-
 import numpy as np
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from . import plotting
-from .config import ARTIFACTS, FIGURES, REPORTS, SEED, get_device, load_json, save_json
+from .config import FIGURES, REPORTS, SEED, save_json
 from .data import frequency_buckets, label_names, split_arrays
-from .evaluate import MODEL_DIR, model_logits
-from .metrics import softmax
-from .slices import compute_slices
-from .train import predict_logits, tokenize
+from .inference import VARIANTS, Predictor, split_logits
+from .perturb import PERTURBATIONS, gender_swap, has_gender
+from .slices import CONTRACT_FAMILIES, compute_slices
 
-# ------------------------------------------------------ perturbations ----
-_GENDER = {"he": "she", "she": "he", "him": "her", "his": "her", "her": "his", "hers": "his",
-           "himself": "herself", "herself": "himself", "mr.": "ms.", "ms.": "mr.", "mrs.": "mr."}
-_GENDER_RE = re.compile(r"\b(" + "|".join(re.escape(k) for k in _GENDER) + r")(?=\W|$)", re.I)
-
-
-def _keep_case(src: str, dst: str) -> str:
-    return dst.capitalize() if src[:1].isupper() else dst
-
-
-def gender_swap(t: str) -> str:
-    return _GENDER_RE.sub(lambda m: _keep_case(m.group(0), _GENDER[m.group(0).lower()]), t)
-
-
-_US_JUR = re.compile(r"\b(the )?(state of )?(delaware|new york|california|texas|nevada|illinois|"
-                     r"massachusetts|new jersey|florida|pennsylvania|ohio|georgia|washington|"
-                     r"maryland|colorado|minnesota|north carolina|virginia)\b", re.I)
-
-
-def eu_jurisdiction(t: str) -> str:
-    """US state -> European jurisdiction (rotating so we test several)."""
-    targets = ["England and Wales", "Germany", "France", "the Netherlands", "Ireland"]
-    i = sum(map(ord, t)) % len(targets)
-    t = _US_JUR.sub(targets[i], t)
-    return re.sub(r"\b(United States|U\.S\.)\b", "European Union", t)
-
-
-def euro(t: str) -> str:
-    t = re.sub(r"\$\s?(\d)", r"EUR \1", t)
-    return re.sub(r"\bdollars\b", "euros", re.sub(r"\bDollars\b", "Euros", t))
-
-
-_BRIT = [("organization", "organisation"), ("authoriz", "authoris"), ("recogniz", "recognis"),
-         ("favor", "favour"), ("labor", "labour"), ("license", "licence"), ("defense", "defence"),
-         ("judgment", "judgement"), ("center", "centre"), ("canceled", "cancelled"),
-         ("program", "programme"), ("fulfill", "fulfil"), ("analyz", "analys"), ("utiliz", "utilis")]
-
-
-def british(t: str) -> str:
-    for a, b in _BRIT:
-        t = re.sub(a, b, t)
-        t = re.sub(a.capitalize(), b.capitalize(), t)
-    return t
-
-
-def eu_party_names(t: str) -> str:
-    """Generic US party designations -> fictitious European company names."""
-    t = re.sub(r"\bthe Company\b", "Lumen Technik GmbH", t)
-    t = re.sub(r"\bthe Borrower\b", "Rivière Énergie SAS", t)
-    return re.sub(r"\bInc\.", "B.V.", t)
-
-
-def typos(t: str, rate: float = 0.03, seed: int = SEED) -> str:
-    """Drop ~3% of letters (OCR / scanning noise)."""
-    rng = np.random.default_rng(seed + len(t))
-    return "".join(c for c in t if not (c.isalpha() and rng.random() < rate))
-
-
-PERTURBATIONS = {
-    "gender swap (he<->she)": (gender_swap, lambda t: bool(_GENDER_RE.search(t))),
-    "US state -> EU jurisdiction": (eu_jurisdiction, lambda t: bool(_US_JUR.search(t))),
-    "$ -> EUR": (euro, lambda t: bool(re.search(r"\$\s?\d|\bdollars\b", t, re.I))),
-    "British spelling": (british, lambda t: british(t) != t),
-    "European party names": (eu_party_names, lambda t: eu_party_names(t) != t),
-    "3% letter drops (OCR noise)": (typos, lambda t: True),
-}
+VLABEL = {"ensemble": "Combination", "bert": "Legal-BERT alone", "tfidf": "TF-IDF"}
+VCOLOR = {"ensemble": plotting.SERIES[0], "bert": plotting.SERIES[1], "tfidf": plotting.SERIES[2]}
+SMALL_GROUP = 100  # below this, intervals are too wide to read anything into a gap
 
 # Hand-written inputs the system should NOT label confidently.
 OUT_OF_SCOPE = [
@@ -107,23 +47,12 @@ OUT_OF_SCOPE = [
     ("E-mail, not a clause", "Hi team, please find attached the signed version of the supplier agreement. Let me know if you need anything else before Friday."),
     ("Random text", "Preheat the oven to 180 degrees, mix the flour with the eggs and bake for twenty-five minutes."),
 ]
+OOS_NOTE = ("None of these inputs has a correct LEDGAR label (or is not an English contract clause). "
+            "Any answered prediction is a confident error. A confidence threshold reduces but does not "
+            "guarantee the detection of out-of-scope inputs.")
 
 
-class Classifier:
-    def __init__(self):
-        self.device = get_device()
-        self.tok = AutoTokenizer.from_pretrained(MODEL_DIR)
-        self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(self.device)
-        self.T = load_json(REPORTS / "eval_metrics.json")["calibration"]["temperature"]
-
-    def probs(self, texts: list[str]) -> np.ndarray:
-        max_len = load_json(MODEL_DIR / "training_config.json")["max_length"]
-        lg = predict_logits(self.model, tokenize(self.tok, texts, max_len), self.tok.pad_token_id,
-                            self.device, desc="audit")
-        return softmax(lg, self.T)
-
-
-def _wilson(k: int, n: int, z: float = 1.96) -> list[float]:
+def wilson(k: int, n: int, z: float = 1.96) -> list[float]:
     if n == 0:
         return [float("nan")] * 2
     p = k / n
@@ -133,102 +62,103 @@ def _wilson(k: int, n: int, z: float = 1.96) -> list[float]:
     return [float(c - h), float(c + h)]
 
 
-def slice_report(y, pred, bpred, slices: dict[str, np.ndarray], per_class_recall: np.ndarray) -> dict:
-    overall = float((pred == y).mean())
-    out = {"overall_accuracy": overall}
+# ------------------------------------------------------------------ slices ----
+def slice_report(y, probs: dict, thresholds: dict, slices: dict[str, np.ndarray]) -> dict:
+    out = {}
+    recall = {}
+    for v in VARIANTS:
+        pred = probs[v].argmax(1)
+        recall[v] = np.array([((pred == c) & (y == c)).sum() / max((y == c).sum(), 1)
+                              for c in range(probs[v].shape[1])])
     for name, arr in slices.items():
         rows = []
         for g in sorted(set(arr.tolist())):
             m = arr == g
-            n, k = int(m.sum()), int((pred[m] == y[m]).sum())
-            # What accuracy would we expect from this slice's clause-type mix alone?
-            expected = float(per_class_recall[y[m]].mean())
-            acc = k / n
-            ci = _wilson(k, n)
-            rows.append({
-                "group": g, "n": n, "accuracy": acc, "accuracy_95ci": ci,
-                "baseline_accuracy": float((bpred[m] == y[m]).mean()),
-                "expected_from_label_mix": expected,
-                "mix_adjusted_gap": acc - expected,
-                "flag": bool(ci[1] < expected),  # significantly worse than its mix predicts
-            })
+            n = int(m.sum())
+            row = {"group": g, "n": n, "small_group": n < SMALL_GROUP}
+            for v in VARIANTS:
+                p = probs[v][m]
+                pred = p.argmax(1)
+                k = int((pred == y[m]).sum())
+                ans = p.max(1) >= thresholds[v]
+                expected = float(recall[v][y[m]].mean())
+                ci = wilson(k, n)
+                row[v] = {
+                    "accuracy": k / n, "accuracy_95ci": ci,
+                    "expected_from_clause_type_mix": expected,
+                    "mix_adjusted_gap_points": (k / n - expected) * 100,
+                    "below_mix_expectation_beyond_95ci": bool(ci[1] < expected),
+                    "coverage": float(ans.mean()),
+                    "correct_rate_among_handled": float((pred[ans] == y[m][ans]).mean()) if ans.any() else None,
+                    "n_handled": int(ans.sum()),
+                }
+            rows.append(row)
         out[name] = rows
     return out
 
 
-def run() -> dict:
-    names = label_names()
-    Xtr, ytr = split_arrays("train")
-    Xte, yte = split_arrays("test")
-    lt, _ = model_logits("test")
-    pred = lt.argmax(1)
-    bpred = np.load(ARTIFACTS / "baseline_test_logits.npz")["logits"].argmax(1)
-    eval_m = load_json(REPORTS / "eval_metrics.json")
-    thr = eval_m["calibration"]["abstain_threshold_for_95pct_val_accuracy"]
-
-    recall = np.array([((pred == c) & (yte == c)).sum() / max((yte == c).sum(), 1) for c in range(len(names))])
-    slices = compute_slices(Xte)
-    buckets = frequency_buckets(ytr, len(names))
-    slices["class_frequency"] = np.array([buckets[c] for c in yte])
-
-    out: dict = {"slices": slice_report(yte, pred, bpred, slices, recall)}
-
-    # ---- counterfactuals -------------------------------------------------
-    clf = Classifier()
-    cf = []
-    examples = {}
-    for pname, (fn, applies) in PERTURBATIONS.items():
-        idx = [i for i, t in enumerate(Xte) if applies(t)]
+# ---------------------------------------------------------- counterfactuals ----
+def counterfactuals(P: Predictor, X: list[str], y: np.ndarray, names: list[str]) -> tuple[list, dict, dict]:
+    rows, flips_ex, samples = [], {}, {}
+    rng = np.random.default_rng(SEED)
+    for pname, (fn, applies, meaning) in PERTURBATIONS.items():
+        idx = [i for i, t in enumerate(X) if applies(t)]
         if pname.startswith("3%"):
-            idx = np.random.default_rng(SEED).choice(len(Xte), 1000, replace=False).tolist()
-        orig = [Xte[i] for i in idx]
-        new = [fn(t) for t in orig]
-        changed = [j for j, (a, b) in enumerate(zip(orig, new)) if a != b]
-        if not changed:
+            idx = sorted(rng.choice(len(X), 1000, replace=False).tolist())
+        pairs = [(i, X[i], fn(X[i])) for i in idx]
+        pairs = [p for p in pairs if p[1] != p[2]]
+        if not pairs:
             continue
-        p0 = clf.probs([orig[j] for j in changed])
-        p1 = clf.probs([new[j] for j in changed])
-        y = yte[[idx[j] for j in changed]]
-        flips = p0.argmax(1) != p1.argmax(1)
-        cf.append({
-            "perturbation": pname, "n": len(changed),
-            "flip_rate": float(flips.mean()),
-            "flip_rate_95ci": _wilson(int(flips.sum()), len(changed)),
-            "accuracy_before": float((p0.argmax(1) == y).mean()),
-            "accuracy_after": float((p1.argmax(1) == y).mean()),
-            "mean_abs_conf_change_on_true_label": float(np.abs(p0[np.arange(len(y)), y] - p1[np.arange(len(y)), y]).mean()),
-        })
-        flipped = np.where(flips)[0][:3]
-        examples[pname] = [{"before": orig[changed[j]][:250], "after": new[changed[j]][:250],
-                            "pred_before": names[p0[j].argmax()], "pred_after": names[p1[j].argmax()],
-                            "true": names[y[j]]} for j in flipped]
-    out["counterfactuals"] = cf
-    out["counterfactual_flip_examples"] = examples
-
-    # ---- out-of-scope ----------------------------------------------------
-    p = clf.probs([t for _, t in OUT_OF_SCOPE])
-    out["out_of_scope"] = {
-        "abstain_threshold": thr,
-        "items": [{"input": n, "predicted": names[r.argmax()], "confidence": float(r.max()),
-                   "abstains": bool(r.max() < thr)} for (n, _), r in zip(OUT_OF_SCOPE, p)],
-    }
-
-    out["retrieval"] = retrieval_audit(Xte, yte, slices)
-    save_json(out, REPORTS / "audit.json")
-    _figures(out)
-    return out
+        ii = np.array([p[0] for p in pairs])
+        before = P.probs([p[1] for p in pairs])
+        after = P.probs([p[2] for p in pairs])
+        yy = y[ii]
+        row = {"perturbation": pname, "meaning": meaning, "n": len(pairs)}
+        for v in VARIANTS:
+            b, a = before[v], after[v]
+            flips = b.argmax(1) != a.argmax(1)
+            thr = P.threshold(v)
+            abst_change = (b.max(1) >= thr) != (a.max(1) >= thr)
+            row[v] = {
+                "type_flip_rate": float(flips.mean()), "type_flip_rate_95ci": wilson(int(flips.sum()), len(pairs)),
+                "n_flips": int(flips.sum()),
+                "accuracy_before": float((b.argmax(1) == yy).mean()),
+                "accuracy_after": float((a.argmax(1) == yy).mean()),
+                "abstention_decision_changed_rate": float(abst_change.mean()),
+                "mean_abs_change_true_label_score": float(np.abs(b[np.arange(len(yy)), yy]
+                                                                 - a[np.arange(len(yy)), yy]).mean()),
+            }
+            if v == "ensemble":
+                flips_ex[pname] = [{"before": pairs[j][1][:300], "after": pairs[j][2][:300],
+                                    "pred_before": names[b[j].argmax()], "pred_after": names[a[j].argmax()],
+                                    "true": names[yy[j]]} for j in np.where(flips)[0][:4]]
+        rows.append(row)
+        # Random before/after samples, kept for manual review of the edit rules.
+        pick = rng.choice(len(pairs), min(4, len(pairs)), replace=False)
+        samples[pname] = [{"before": _diff_window(pairs[j][1], pairs[j][2])[0],
+                           "after": _diff_window(pairs[j][1], pairs[j][2])[1]} for j in pick]
+    return rows, flips_ex, samples
 
 
+def _diff_window(a: str, b: str, ctx: int = 90) -> tuple[str, str]:
+    """Short excerpt around the first difference, so reviewers see the edit."""
+    i = next((k for k, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    s = max(0, i - ctx)
+    return a[s:i + ctx], b[s:i + ctx]
+
+
+# ----------------------------------------------------------------- retrieval ----
 def retrieval_audit(Xte, yte, slices) -> dict:
     from .retrieval import ClauseIndex, norm_hash
 
     idx = ClauseIndex.load()
     rng = np.random.default_rng(SEED)
     fam = slices["contract_family"]
-    bank_fam = compute_slices(idx.texts)["contract_family"]
-    res: dict = {}
+    bank_slices = compute_slices(idx.texts)
+    bank_fam = bank_slices["contract_family"]
+    res: dict = {"protocol": "test clause as query, hybrid (dense+BM25) top-10, exact duplicates of the "
+                             "query removed, relevant = same LEDGAR label; <=150 queries per family"}
 
-    # Quality (hybrid P@10, clause->clause) per contract family, 150 queries each.
     sel = []
     for g in sorted(set(fam.tolist())):
         pool = np.where(fam == g)[0]
@@ -244,70 +174,145 @@ def retrieval_audit(Xte, yte, slices) -> dict:
         for j in top:
             if bank_fam[j] != fam[i]:
                 exposure[bank_fam[j]] = exposure.get(bank_fam[j], 0) + 1
-    res["hybrid_p@10_by_contract_family"] = {k: float(np.mean(v)) for k, v in per_fam.items()}
+    res["hybrid_p@10_by_contract_family"] = {
+        k: {"p@10": float(np.mean(v)), "n_queries": len(v), "sd": float(np.std(v))} for k, v in per_fam.items()}
     bank_share = {g: float((bank_fam == g).mean()) for g in sorted(set(bank_fam.tolist()))}
     tot = sum(exposure.values()) or 1
     res["cross_family_results_share_vs_bank_share"] = {
         g: {"share_of_cross_family_results": exposure.get(g, 0) / tot, "share_of_bank": bank_share[g]}
         for g in bank_share}
 
-    # Stability of top-10 under gender swap.
-    gi = [i for i, t in enumerate(Xte) if _GENDER_RE.search(t)][:300]
+    gi = [i for i, t in enumerate(Xte) if has_gender(t)][:300]
     a = idx.embed([Xte[i] for i in gi], is_question=False)
     b = idx.embed([gender_swap(Xte[i]) for i in gi], is_question=False)
-    jac = []
+    jac, same_label_rate = [], []
     for i, ea, eb in zip(gi, a, b):
-        ta = set(np.argsort(-idx.rrf(idx.dense_scores(ea), idx.bm25_scores(Xte[i])))[:10])
-        tb = set(np.argsort(-idx.rrf(idx.dense_scores(eb), idx.bm25_scores(gender_swap(Xte[i]))))[:10])
-        jac.append(len(ta & tb) / len(ta | tb))
-    res["gender_swap_top10_jaccard"] = {"mean": float(np.mean(jac)), "n": len(jac),
-                                        "share_identical": float(np.mean(np.array(jac) == 1))}
-    # Pronoun make-up of the bank (what a lawyer sees as "precedent").
-    pr = compute_slices(idx.texts)["pronouns"]
+        ta = np.argsort(-idx.rrf(idx.dense_scores(ea), idx.bm25_scores(Xte[i])))[:10]
+        tb = np.argsort(-idx.rrf(idx.dense_scores(eb), idx.bm25_scores(gender_swap(Xte[i]))))[:10]
+        jac.append(len(set(ta) & set(tb)) / len(set(ta) | set(tb)))
+        same_label_rate.append(((idx.labels[ta] == yte[i]).mean(), (idx.labels[tb] == yte[i]).mean()))
+    sl = np.array(same_label_rate)
+    res["gender_swap_top10"] = {
+        "n_queries": len(jac), "mean_jaccard": float(np.mean(jac)),
+        "share_identical_sets": float(np.mean(np.array(jac) == 1)),
+        "p@10_original": float(sl[:, 0].mean()), "p@10_swapped": float(sl[:, 1].mean()),
+        "reading": "results change (different precedents shown) even when relevance stays similar"}
+    pr = bank_slices["pronouns"]
     res["bank_pronoun_share"] = {g: float((pr == g).mean()) for g in sorted(set(pr.tolist()))}
     return res
 
 
+# ----------------------------------------------------------------------- run ----
+def run() -> dict:
+    names = label_names()
+    Xtr, ytr = split_arrays("train")
+    Xte, yte = split_arrays("test")
+    P = Predictor()
+    lb, y_b = split_logits("test", "bert")
+    lt, _ = split_logits("test", "tfidf")
+    assert np.array_equal(y_b, yte)
+    probs = P.probs_from_logits(lb, lt)
+    thresholds = {v: P.threshold(v) for v in VARIANTS}
+
+    slices = compute_slices(Xte)
+    buckets = frequency_buckets(ytr, len(names))
+    slices["class_frequency"] = np.array([buckets[c] for c in yte])
+
+    out: dict = {
+        "primary_variant": "ensemble",
+        "thresholds_used": thresholds,
+        "caveats": [
+            "Groups are keyword proxies inferred from clause text (slices.py), not metadata, "
+            "not certified personal attributes; a clause can be mis-assigned.",
+            f"Groups with n < {SMALL_GROUP} have wide intervals; no conclusion on fairness or discrimination "
+            "can be drawn from them.",
+            "The mix-adjusted gap compares a group with the accuracy its clause-type mix would predict; "
+            "it is descriptive, not causal.",
+            "Counterfactual edits test stability of the clause TYPE; jurisdiction and currency edits change "
+            "the legal content, so a stable type does not imply an equivalent clause.",
+        ],
+        "slice_definitions": {"contract_family_keywords": CONTRACT_FAMILIES,
+                              "class_frequency": "terciles of training count (head/torso/tail)",
+                              "pronouns": "he/him/his/himself vs she/her/hers/herself in the clause",
+                              "jurisdiction": "US state or non-US place named in the clause"},
+        "slices": slice_report(yte, probs, thresholds, slices),
+    }
+    cf, flips_ex, samples = counterfactuals(P, Xte, yte, names)
+    out["counterfactuals"] = cf
+    out["counterfactual_flip_examples_ensemble"] = flips_ex
+    out["counterfactual_edit_samples_for_review"] = samples
+
+    p_oos = P.probs([t for _, t in OUT_OF_SCOPE])
+    items = []
+    for j, (n, t) in enumerate(OUT_OF_SCOPE):
+        row = {"input": n, "text": t}
+        for v in VARIANTS:
+            r = p_oos[v][j]
+            row[v] = {"predicted": names[r.argmax()], "confidence": float(r.max()),
+                      "abstains": bool(r.max() < thresholds[v])}
+        items.append(row)
+    out["out_of_scope"] = {
+        "note": OOS_NOTE, "items": items,
+        "confident_errors": {v: [it["input"] for it in items if not it[v]["abstains"]] for v in VARIANTS},
+    }
+    out["retrieval"] = retrieval_audit(Xte, yte, slices)
+    save_json(out, REPORTS / "audit.json")
+    _figures(out)
+    return out
+
+
 def _figures(out):
     plt = plotting.plt
-    panels = [k for k in ("contract_family", "jurisdiction", "pronouns", "length", "class_frequency")]
-    fig, axes = plt.subplots(1, len(panels), figsize=(15, 3.6), sharey=True)
+    panels = ("contract_family", "jurisdiction", "pronouns", "length", "class_frequency")
+    fig, axes = plt.subplots(1, len(panels), figsize=(18, 4.8), sharey=True,
+                             gridspec_kw={"width_ratios": [6, 3, 4, 4, 3]})
+    width = 0.26
     for ax, k in zip(axes, panels):
         rows = out["slices"][k]
         x = np.arange(len(rows))
-        acc = [r["accuracy"] for r in rows]
-        lo = [r["accuracy"] - r["accuracy_95ci"][0] for r in rows]
-        hi = [r["accuracy_95ci"][1] - r["accuracy"] for r in rows]
-        ax.bar(x, acc, color=plotting.SERIES[0], width=0.6, label="Accuracy (95% CI)")
-        ax.errorbar(x, acc, yerr=[lo, hi], fmt="none", ecolor=plotting.INK_2, lw=1, capsize=2)
-        ax.scatter(x, [r["expected_from_label_mix"] for r in rows], marker="_", s=300, lw=2,
-                   color=plotting.SERIES[1], zorder=3, label="Expected from clause-type mix")
-        ax.set_xticks(x, [f"{r['group']}\n(n={r['n']})" for r in rows], fontsize=7, rotation=30, ha="right")
+        for o, v in zip((-width, 0, width), VARIANTS):
+            acc = np.array([r[v]["accuracy"] for r in rows])
+            lo = acc - np.array([r[v]["accuracy_95ci"][0] for r in rows])
+            hi = np.array([r[v]["accuracy_95ci"][1] for r in rows]) - acc
+            ax.bar(x + o, acc, width=width * 0.92, color=VCOLOR[v], label=VLABEL[v])
+            ax.errorbar(x + o, acc, yerr=[lo, hi], fmt="none", ecolor=plotting.INK_2, lw=0.8, capsize=1.5)
+        ax.scatter(x - width, [r["ensemble"]["expected_from_clause_type_mix"] for r in rows], marker="_",
+                   s=120, lw=2, color=plotting.INK, zorder=4, label="Combination: expected from type mix")
+        ax.set_xticks(x, [f"{r['group']}\n(n={r['n']}{', small' if r['small_group'] else ''})" for r in rows],
+                      fontsize=7, rotation=45, ha="right")
         ax.set_title(k.replace("_", " "), fontsize=10)
-        ax.set_ylim(0.5, 1.0)
+        ax.set_ylim(0.4, 1.0)
         ax.grid(axis="x", visible=False)
-    axes[0].set_ylabel("Test accuracy")
-    axes[0].legend(loc="lower left", fontsize=7)
-    fig.suptitle("Classifier accuracy by slice", x=0.01, ha="left", fontweight="semibold")
+    axes[0].set_ylabel("Test accuracy (95% Wilson CI)")
+    h, lbl = axes[0].get_legend_handles_labels()
+    fig.legend(h, lbl, loc="upper right", ncol=4, fontsize=8, bbox_to_anchor=(0.99, 1.0))
+    fig.suptitle("Accuracy by keyword-proxy slice (descriptive; small groups are inconclusive)",
+                 x=0.01, ha="left", fontweight="semibold")
+    fig.subplots_adjust(top=0.82, wspace=0.08)
     plotting.save(fig, FIGURES / "slice_accuracy.png")
 
     cf = out["counterfactuals"]
-    fig, ax = plt.subplots(figsize=(7, 3.2))
+    fig, ax = plt.subplots(figsize=(8, 4))
     y = np.arange(len(cf))
-    fr = [r["flip_rate"] for r in cf]
-    ax.barh(y, fr, color=plotting.SERIES[0], height=0.55)
-    ax.errorbar(fr, y, xerr=[[r["flip_rate"] - r["flip_rate_95ci"][0] for r in cf],
-                             [r["flip_rate_95ci"][1] - r["flip_rate"] for r in cf]],
-                fmt="none", ecolor=plotting.INK_2, lw=1, capsize=2)
+    h = 0.26
+    xmax = 0
+    for o, v in zip((-h, 0, h), VARIANTS):
+        fr = np.array([r[v]["type_flip_rate"] for r in cf])
+        lo = fr - np.array([r[v]["type_flip_rate_95ci"][0] for r in cf])
+        hi = np.array([r[v]["type_flip_rate_95ci"][1] for r in cf]) - fr
+        ax.barh(y + o, fr, height=h * 0.92, color=VCOLOR[v], label=VLABEL[v])
+        ax.errorbar(fr, y + o, xerr=[lo, hi], fmt="none", ecolor=plotting.INK_2, lw=0.8, capsize=1.5)
+        xmax = max(xmax, (fr + hi).max())
     for yi, r in zip(y, cf):
-        ax.text(r["flip_rate_95ci"][1] + 0.003, yi, f"{r['flip_rate']:.1%}  (n={r['n']})", va="center",
-                fontsize=8, color=plotting.INK)
-    ax.set_yticks(y, [r["perturbation"] for r in cf])
+        ax.text(xmax * 1.05, yi - h, f"{r['ensemble']['type_flip_rate']:.1%} (n={r['n']})", va="center",
+                fontsize=7, color=plotting.INK)
+    ax.set_yticks(y, [r["perturbation"] for r in cf], fontsize=8)
     ax.invert_yaxis()
-    ax.set_xlabel("Share of clauses whose predicted type changes")
-    ax.set_title("Counterfactual edits that should not change the clause type")
+    ax.set_xlim(0, xmax * 1.35)
+    ax.set_xlabel("Share of edited clauses whose predicted TYPE changes (95% CI)")
+    ax.set_title("Counterfactual edits (label: combination flip rate)")
     ax.grid(axis="y", visible=False)
-    ax.set_xlim(0, max(r["flip_rate_95ci"][1] for r in cf) * 1.35 + 0.01)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3, fontsize=8)
     plotting.save(fig, FIGURES / "counterfactual_flips.png")
 
 

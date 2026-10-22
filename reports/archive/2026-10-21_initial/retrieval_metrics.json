@@ -1,0 +1,121 @@
+{
+  "bank_size": 59080,
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "clause_to_clause": {
+    "dense": {
+      "p@1": 0.7655453618756372,
+      "p@5": 0.6852191641182466,
+      "p@10": 0.6480122324159022,
+      "mrr@10": 0.8136635762018025,
+      "n_queries": 981
+    },
+    "bm25": {
+      "p@1": 0.7696228338430173,
+      "p@5": 0.6841997961264017,
+      "p@10": 0.6458715596330274,
+      "mrr@10": 0.81714763037393,
+      "n_queries": 981
+    },
+    "hybrid": {
+      "p@1": 0.7747196738022426,
+      "p@5": 0.7019367991845055,
+      "p@10": 0.663506625891947,
+      "mrr@10": 0.8240995582738702,
+      "n_queries": 981
+    }
+  },
+  "clause_to_clause_worst_labels_hybrid_p@10": [
+    [
+      "Assigns",
+      0.05
+    ],
+    [
+      "Agreements",
+      0.1
+    ],
+    [
+      "Miscellaneous",
+      0.15
+    ],
+    [
+      "Applicable Laws",
+      0.18000000000000002
+    ],
+    [
+      "Jurisdictions",
+      0.20999999999999996
+    ],
+    [
+      "Venues",
+      0.22000000000000003
+    ],
+    [
+      "Costs",
+      0.22999999999999998
+    ],
+    [
+      "Qualifications",
+      0.24000000000000005
+    ],
+    [
+      "Enforcements",
+      0.26
+    ],
+    [
+      "Powers",
+      0.26
+    ]
+  ],
+  "questions": [
+    {
+      "mode": "dense",
+      "p@1": 0.85,
+      "p@10": 0.875,
+      "period_match@10 (constraint questions)": 0.675
+    },
+    {
+      "mode": "bm25",
+      "p@1": 0.825,
+      "p@10": 0.8299999999999998,
+      "period_match@10 (constraint questions)": 0.9
+    },
+    {
+      "mode": "hybrid",
+      "p@1": 0.925,
+      "p@10": 0.8925000000000001,
+      "period_match@10 (constraint questions)": 0.925
+    },
+    {
+      "mode": "hybrid + period filter",
+      "p@1": 0.925,
+      "p@10": 0.89,
+      "period_match@10 (constraint questions)": 1.0
+    }
+  ],
+  "n_questions": 40,
+  "example": {
+    "query": "show me termination clauses with a 30-day notice period",
+    "hits": [
+      {
+        "label": "Notices",
+        "text": "In the event Participant believes that a \u201cGood Reason\u201d event has been triggered, Participant must give the Company written notice within 30 days of the first occurrence of such triggering event and a proposed termination date which shall be not sooner than 60 days nor later than 90 days after the da"
+      },
+      {
+        "label": "Notices",
+        "text": "Notwithstanding the foregoing, it shall be a condition precedent to the Company\u2019s right to terminate the Executive\u2019s employment for Cause and the Executive\u2019s right to terminate employment for Good Reason that (i) the Party seeking the termination shall first have given the other Party written notice"
+      },
+      {
+        "label": "Terms",
+        "text": "The term of this Agreement shall be for a period of ______ and shall be automatically extended for additional ______ terms on the same conditions as set forth herein unless earlier terminated by either Party for any reason upon prior written notice to the other, such termination to become effective "
+      },
+      {
+        "label": "Terminations",
+        "text": "This Agreement will terminate upon the expiration of the Term.\u00a0\u00a0The Company may terminate the Agreement with or without Cause (as defined below) , upon providing\u00a0\u00a0Consultant with written notice of such termination pursuant to Section\u00a0 13.G of this Agreement (the \u201c Termination Notice \u201d) . \u00a0\u00a0In the ev"
+      },
+      {
+        "label": "Notices",
+        "text": "It shall be a condition precedent to XOMA\u2019s right to terminate Employee\u2019s employment for the reasons set forth in Sections 7(d)(ii) or (iii) of this Agreement that (i) XOMA shall first have given Employee written notice stating with specificity the reason for the termination (\u201c Breach \u201d) and (ii) if"
+      }
+    ]
+  }
+}

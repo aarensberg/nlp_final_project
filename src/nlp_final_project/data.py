@@ -7,7 +7,7 @@ from functools import lru_cache
 import numpy as np
 from datasets import DatasetDict, load_dataset
 
-from .config import DATASET
+from .config import DATASET, DATASET_REVISION
 
 
 @lru_cache(maxsize=1)
@@ -17,7 +17,7 @@ def load_ledgar() -> DatasetDict:
     The official split is chronological (older filings in train, newer in test),
     so the test score already includes some temporal drift.
     """
-    return load_dataset(*DATASET)
+    return load_dataset(*DATASET, revision=DATASET_REVISION)
 
 
 def label_names() -> list[str]:

@@ -1,205 +1,217 @@
-"""Held-out evaluation of the fine-tuned classifier (and comparison with the baseline).
+"""Held-out evaluation of the three classifier variants on the LEDGAR test split.
 
-Produces: overall metrics with bootstrap CIs, per-class scores, top confusions,
-calibration before/after temperature scaling, and a confidence threshold that
-lets the assistant abstain ("ask a lawyer") when it is unsure.
+Variants: `ensemble` (shipped: weighted BERT + TF-IDF), `bert` (fine-tuned
+Legal-BERT alone), `tfidf` (TF-IDF + logistic regression baseline).
+
+Every parameter (temperatures, ensemble weight, abstention thresholds) is fitted
+on VALIDATION by `inference.fit_inference_config()` and only applied to test.
+
+Outputs: reports/eval_metrics.json, reports/per_class_test.csv,
+reports/inference_config.json and figures in reports/figures/.
 
 Run: uv run nlp-final-project evaluate
 """
 
 from __future__ import annotations
 
-import hashlib
-import re
+import csv
 
 import numpy as np
 from scipy.stats import binomtest
 from sklearn.metrics import f1_score
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from . import plotting
-from .config import ARTIFACTS, FIGURES, REPORTS, get_device, load_json, save_json
+from .config import FIGURES, REPORTS, SEED, save_json
 from .data import frequency_buckets, label_names, split_arrays
-from .metrics import (bootstrap_ci, core_metrics, coverage_curve, ece, fit_temperature, per_class,
-                      reliability, softmax, threshold_for_precision, top_confusions)
-from .train import predict_logits, tokenize
+from .inference import VARIANTS, Predictor, fit_inference_config, split_logits
+from .metrics import (bootstrap_ci, core_metrics, coverage_curve, ece, per_class, reliability, softmax,
+                      top_confusions)
+from .retrieval import norm_hash
 
-MODEL_DIR = ARTIFACTS / "classifier"
-
-
-def model_logits(split: str) -> tuple[np.ndarray, np.ndarray]:
-    """Logits of the fine-tuned model on a split (cached in artifacts/)."""
-    cache = ARTIFACTS / f"model_{split}_logits.npz"
-    if cache.exists():
-        z = np.load(cache)
-        return z["logits"], z["labels"]
-    X, y = split_arrays(split)
-    tok = AutoTokenizer.from_pretrained(MODEL_DIR)
-    device = get_device()
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(device)
-    max_len = load_json(MODEL_DIR / "training_config.json")["max_length"]
-    logits = predict_logits(model, tokenize(tok, X, max_len), tok.pad_token_id, device, desc=split)
-    np.savez_compressed(cache, logits=logits, labels=y)
-    return logits, y
+LABEL = {"ensemble": "Combination (BERT 0.2 + TF-IDF 0.8)", "bert": "Legal-BERT alone",
+         "tfidf": "TF-IDF + logistic regression"}
+COLOR = {"ensemble": plotting.SERIES[0], "bert": plotting.SERIES[1], "tfidf": plotting.SERIES[2]}
 
 
-def _hash(t: str) -> str:
-    return hashlib.md5(re.sub(r"\s+", " ", t.lower()).strip().encode()).hexdigest()
+def mcnemar(a_correct: np.ndarray, b_correct: np.ndarray, a: str, b: str) -> dict:
+    """Exact McNemar test on the clauses where exactly one system is correct.
+
+    It tests whether the two error rates differ (accuracy = micro-F1 here);
+    it is NOT a test of the macro-F1 difference.
+    """
+    ab = int((a_correct & ~b_correct).sum())
+    ba = int((~a_correct & b_correct).sum())
+    p = binomtest(ab, ab + ba, 0.5).pvalue if ab + ba else 1.0
+    return {f"{a}_right_{b}_wrong": ab, f"{b}_right_{a}_wrong": ba, "p_value": float(p),
+            "tests": "difference in error rate (accuracy), not macro-F1"}
 
 
-def mcnemar(a_correct: np.ndarray, b_correct: np.ndarray) -> dict:
-    """Exact McNemar test: do the two systems differ on the same test clauses?"""
-    b01 = int((a_correct & ~b_correct).sum())
-    b10 = int((~a_correct & b_correct).sum())
-    p = binomtest(b01, b01 + b10, 0.5).pvalue if b01 + b10 else 1.0
-    return {"model_right_baseline_wrong": b01, "baseline_right_model_wrong": b10, "p_value": float(p)}
+def paired_bootstrap_delta(y, pa, pb, n_boot: int = 1000, seed: int = SEED) -> dict:
+    """95% CI of (A - B) for micro- and macro-F1, resampling the same clauses for both."""
+    rng = np.random.default_rng(seed)
+    n = len(y)
+    d_mi, d_ma = [], []
+    for _ in range(n_boot):
+        i = rng.integers(0, n, n)
+        d_mi.append((pa[i] == y[i]).mean() - (pb[i] == y[i]).mean())
+        d_ma.append(f1_score(y[i], pa[i], average="macro", zero_division=0)
+                    - f1_score(y[i], pb[i], average="macro", zero_division=0))
+    ci = lambda a: [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]  # noqa: E731
+    return {
+        "delta_micro_f1_points": float(((pa == y).mean() - (pb == y).mean()) * 100),
+        "delta_micro_f1_95ci_points": [x * 100 for x in ci(d_mi)],
+        "delta_macro_f1_points": float((f1_score(y, pa, average="macro", zero_division=0)
+                                        - f1_score(y, pb, average="macro", zero_division=0)) * 100),
+        "delta_macro_f1_95ci_points": [x * 100 for x in ci(d_ma)],
+    }
 
 
 def run() -> dict:
     names = label_names()
-    _, ytr = split_arrays("train")
+    Xtr, ytr = split_arrays("train")
     Xte, _ = split_arrays("test")
-    lv, yv = model_logits("validation")
-    lt, yt = model_logits("test")
-    pred = lt.argmax(1)
 
-    out: dict = {"model_dir": str(MODEL_DIR)}
-    out["test"] = core_metrics(yt, pred) | bootstrap_ci(yt, pred)
-    out["validation"] = core_metrics(yv, lv.argmax(1))
+    cfg = fit_inference_config()  # validation only
+    P = Predictor()
+    lbv, yv = split_logits("validation", "bert")
+    ltv, _ = split_logits("validation", "tfidf")
+    lbt, yt = split_logits("test", "bert")
+    ltt, _ = split_logits("test", "tfidf")
+    pv = P.probs_from_logits(lbv, ltv)
+    pt = P.probs_from_logits(lbt, ltt)
+    raw_t = {"bert": softmax(lbt), "tfidf": softmax(ltt)}
 
-    # Leakage check: 282 test clauses appear verbatim in train (see EDA).
-    train_hashes = {_hash(t) for t in split_arrays("train")[0]}
-    unseen = np.array([_hash(t) not in train_hashes for t in Xte])
-    out["test_unseen_only"] = core_metrics(yt[unseen], pred[unseen])
-
-    # Head / torso / tail classes.
+    train_hashes = {norm_hash(t) for t in Xtr}
+    unseen = np.array([norm_hash(t) not in train_hashes for t in Xte])
     buckets = frequency_buckets(ytr, len(names))
-    pc = per_class(yt, pred, names)
-    for row, c in zip(pc, range(len(names))):
-        row["train_count"] = int((ytr == c).sum())
-        row["bucket"] = buckets[c]
-    out["by_frequency_bucket"] = {
-        b: float(np.mean([r["f1"] for r in pc if r["bucket"] == b])) for b in ("head", "torso", "tail")
+    train_count = np.bincount(ytr, minlength=len(names))
+
+    out: dict = {
+        "primary_variant": "ensemble",
+        "variants_described": LABEL,
+        "parameters": "fitted on validation, see reports/inference_config.json",
+        "test_n": int(len(yt)),
+        "test_n_without_train_duplicates": int(unseen.sum()),
+        "variants": {},
     }
-    out["worst_classes"] = sorted(pc, key=lambda r: r["f1"])[:12]
-    out["top_confusions"] = top_confusions(yt, pred, names)
+    preds, per_cls = {}, {}
+    for v in VARIANTS:
+        pred = pt[v].argmax(1)
+        preds[v] = pred
+        pc = per_class(yt, pred, names)
+        per_cls[v] = pc
+        for r, c in zip(pc, range(len(names))):
+            r["train_count"], r["bucket"] = int(train_count[c]), buckets[c]
+        thr = P.threshold(v)
+        ans = pt[v].max(1) >= thr
+        out["variants"][v] = {
+            "description": LABEL[v],
+            "test": core_metrics(yt, pred) | bootstrap_ci(yt, pred),
+            "validation": core_metrics(yv, pv[v].argmax(1)),
+            "test_without_train_duplicates": core_metrics(yt[unseen], pred[unseen]),
+            "macro_f1_by_frequency_bucket": {
+                b: float(np.mean([r["f1"] for r in pc if r["bucket"] == b])) for b in ("head", "torso", "tail")},
+            "worst_classes": [{k: r[k] for k in ("label", "precision", "recall", "f1", "support", "train_count")}
+                              for r in sorted(pc, key=lambda r: r["f1"])[:12]],
+            "top_confusions": top_confusions(yt, pred, names),
+            "calibration": {
+                "temperature": (cfg[v]["temperature"] if v != "ensemble" else None),
+                "ece_test_before_temperature": (ece(raw_t[v], yt) if v in raw_t else None),
+                "ece_test": ece(pt[v], yt),
+            },
+            "abstention": {
+                "threshold_chosen_on_validation": thr,
+                "validation_target_correct_rate": cfg["abstention"]["target_validation_accuracy"],
+                "validation_coverage": cfg["abstention"]["validation_coverage"][v],
+                "test_coverage": float(ans.mean()),
+                "test_n_handled": int(ans.sum()),
+                "test_correct_rate_among_handled": float((pred[ans] == yt[ans]).mean()),
+                "test_correct_rate_among_abstained": float((pred[~ans] == yt[~ans]).mean()) if (~ans).any() else None,
+            },
+            "coverage_curve_test": coverage_curve(pt[v], yt),
+        }
 
-    # Calibration + selective prediction (threshold chosen on validation only).
-    T = fit_temperature(lv, yv)
-    pv, pt_raw, pt = softmax(lv, T), softmax(lt), softmax(lt, T)
-    thr = threshold_for_precision(pv, yv, 0.95)
-    answered = pt.max(1) >= thr
-    out["calibration"] = {
-        "temperature": T,
-        "ece_test_before": ece(pt_raw, yt),
-        "ece_test_after": ece(pt, yt),
-        "abstain_threshold_for_95pct_val_accuracy": thr,
-        "test_coverage_at_threshold": float(answered.mean()),
-        "test_accuracy_when_answering": float((pred[answered] == yt[answered]).mean()),
-        "test_accuracy_on_abstained": float((pred[~answered] == yt[~answered]).mean()),
+    out["comparisons"] = {
+        "ensemble_vs_tfidf": paired_bootstrap_delta(yt, preds["ensemble"], preds["tfidf"])
+        | {"mcnemar": mcnemar(preds["ensemble"] == yt, preds["tfidf"] == yt, "ensemble", "tfidf")},
+        "ensemble_vs_bert": paired_bootstrap_delta(yt, preds["ensemble"], preds["bert"])
+        | {"mcnemar": mcnemar(preds["ensemble"] == yt, preds["bert"] == yt, "ensemble", "bert")},
+        "bert_vs_tfidf": paired_bootstrap_delta(yt, preds["bert"], preds["tfidf"])
+        | {"mcnemar": mcnemar(preds["bert"] == yt, preds["tfidf"] == yt, "bert", "tfidf")},
     }
-    out["coverage_curve_test"] = coverage_curve(pt, yt)
-
-    # Baseline comparison on the same clauses.
-    bpath = ARTIFACTS / "baseline_test_logits.npz"
-    if bpath.exists():
-        bl = np.load(bpath)["logits"]
-        bpred = bl.argmax(1)
-        out["baseline_test"] = core_metrics(yt, bpred) | bootstrap_ci(yt, bpred)
-        out["mcnemar_vs_baseline"] = mcnemar(pred == yt, bpred == yt)
-        bpc = per_class(yt, bpred, names)
-        for r, b in zip(pc, bpc):
-            r["baseline_f1"] = b["f1"]
-
-        # Ensemble: weighted mean of both calibrated probability vectors.
-        # The weight is chosen on validation (macro-F1), then applied once to test.
-        bv = np.load(ARTIFACTS / "baseline_validation_logits.npz")["logits"]
-        Tb = fit_temperature(bv, yv)
-        pbv, pbt = softmax(bv, Tb), softmax(bl, Tb)
-        grid = np.linspace(0, 1, 21)
-        val_f1 = [f1_score(yv, (w * pv + (1 - w) * pbv).argmax(1), average="macro") for w in grid]
-        w = float(grid[int(np.argmax(val_f1))])
-        pe = w * pt + (1 - w) * pbt
-        epred = pe.argmax(1)
-        out["ensemble_test"] = core_metrics(yt, epred) | bootstrap_ci(yt, epred) | {
-            "weight_bert": w, "temperature_baseline": Tb, "val_macro_f1_by_weight": dict(zip(map(float, grid), map(float, val_f1)))}
-        out["ensemble_test_unseen_only"] = core_metrics(yt[unseen], epred[unseen])
-        out["mcnemar_ensemble_vs_baseline"] = mcnemar(epred == yt, bpred == yt)
-        epc = per_class(yt, epred, names)
-        for r, e in zip(pc, epc):
-            r["ensemble_f1"] = e["f1"]
-        out["ensemble_by_frequency_bucket"] = {
-            b: float(np.mean([e["f1"] for e, r in zip(epc, pc) if r["bucket"] == b]))
-            for b in ("head", "torso", "tail")}
-        out["baseline_by_frequency_bucket"] = {
-            b: float(np.mean([x["f1"] for x, r in zip(bpc, pc) if r["bucket"] == b]))
-            for b in ("head", "torso", "tail")}
-        np.savez_compressed(ARTIFACTS / "ensemble_test_probs.npz", probs=pe, weight=w)
-        # Same abstention analysis for the ensemble.
-        pev = w * pv + (1 - w) * pbv
-        ethr = threshold_for_precision(pev, yv, 0.95)
-        ans = pe.max(1) >= ethr
-        out["ensemble_calibration"] = {
-            "ece_test": ece(pe, yt), "abstain_threshold_for_95pct_val_accuracy": ethr,
-            "test_coverage_at_threshold": float(ans.mean()),
-            "test_accuracy_when_answering": float((epred[ans] == yt[ans]).mean())}
-
     save_json(out, REPORTS / "eval_metrics.json")
-    import csv
-    with open(REPORTS / "per_class_test.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(pc[0].keys()))
-        w.writeheader()
-        w.writerows(sorted(pc, key=lambda r: -r["support"]))
-    _figures(pc, pv, pt_raw, pt, yt, out)
+    _write_csv(per_cls, names)
+    _figures(per_cls, pt, raw_t, yt, out)
     return out
 
 
-def _figures(pc, pv, pt_raw, pt, yt, out):
+def _write_csv(per_cls, names) -> None:
+    rows = []
+    for c in range(len(names)):
+        base = per_cls["ensemble"][c]
+        row = {"label": base["label"], "test_support": base["support"], "train_count": base["train_count"],
+               "frequency_bucket": base["bucket"]}
+        for v in VARIANTS:
+            r = per_cls[v][c]
+            row |= {f"{v}_precision": round(r["precision"], 4), f"{v}_recall": round(r["recall"], 4),
+                    f"{v}_f1": round(r["f1"], 4)}
+        rows.append(row)
+    with open(REPORTS / "per_class_test.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(sorted(rows, key=lambda r: -r["test_support"]))
+
+
+def _figures(per_cls, pt, raw_t, yt, out) -> None:
     plt = plotting.plt
-    # Per-class F1 vs training frequency.
-    fig, ax = plt.subplots(figsize=(7, 4))
-    x = [r["train_count"] for r in pc]
-    ax.scatter(x, [r["f1"] for r in pc], s=22, color=plotting.SERIES[0], label="Fine-tuned BERT",
-               edgecolor=plotting.SURFACE, linewidth=1, zorder=3)
-    if "baseline_f1" in pc[0]:
-        ax.scatter(x, [r["baseline_f1"] for r in pc], s=14, color=plotting.SERIES[1], marker="s",
-                   label="TF-IDF baseline", edgecolor=plotting.SURFACE, linewidth=1, zorder=2)
-    for r in sorted(pc, key=lambda r: r["f1"])[:5]:
-        ax.annotate(r["label"], (r["train_count"], r["f1"]), xytext=(5, -3),
-                    textcoords="offset points", fontsize=7, color=plotting.INK_2)
+    # Per-class F1 vs training frequency, three variants.
+    fig, ax = plt.subplots(figsize=(7.5, 4.2))
+    for v, marker, size in (("tfidf", "s", 14), ("bert", "^", 16), ("ensemble", "o", 22)):
+        pc = per_cls[v]
+        ax.scatter([r["train_count"] for r in pc], [r["f1"] for r in pc], s=size, marker=marker,
+                   color=COLOR[v], label=LABEL[v], edgecolor=plotting.SURFACE, linewidth=0.8,
+                   zorder=3 if v == "ensemble" else 2)
+    for r in sorted(per_cls["ensemble"], key=lambda r: r["f1"])[:5]:
+        ax.annotate(r["label"], (r["train_count"], r["f1"]), xytext=(5, -3), textcoords="offset points",
+                    fontsize=7, color=plotting.INK_2)
     ax.set_xscale("log")
     ax.set_xlabel("Training clauses for the class (log)")
     ax.set_ylabel("Test F1")
-    ax.set_title("Per-class F1 against training frequency")
-    ax.legend(loc="lower right")
+    ax.set_title("Per-class test F1 against training frequency")
+    ax.legend(loc="lower right", fontsize=8)
     plotting.save(fig, FIGURES / "per_class_f1_vs_frequency.png")
 
-    # Reliability diagram.
-    fig, ax = plt.subplots(figsize=(4.6, 4.4))
+    # Reliability diagram: calibrated scores of each variant (+ raw BERT for reference).
+    fig, ax = plt.subplots(figsize=(5, 4.6))
     ax.plot([0, 1], [0, 1], color=plotting.INK_2, lw=1, ls="--")
-    for probs, lbl, c in ((pt_raw, "Raw", plotting.SERIES[1]), (pt, "Temperature-scaled", plotting.SERIES[0])):
+    series = [(pt[v], LABEL[v] + (" (temperature-scaled)" if v != "ensemble" else ""), COLOR[v], "-")
+              for v in VARIANTS]
+    series.append((raw_t["bert"], "Legal-BERT alone, before scaling", COLOR["bert"], ":"))
+    for probs, lbl, c, ls in series:
         rows = reliability(probs, yt)
-        ax.plot([r[0] for r in rows], [r[1] for r in rows], marker="o", ms=5, lw=2, color=c, label=lbl)
-    ax.set_xlabel("Mean confidence")
-    ax.set_ylabel("Accuracy")
-    ax.set_title("Calibration (test)")
-    ax.legend(loc="upper left")
+        ax.plot([r[0] for r in rows], [r[1] for r in rows], marker="o", ms=4, lw=2, ls=ls, color=c, label=lbl)
+    ax.set_xlabel("Mean confidence (test)")
+    ax.set_ylabel("Share correct (test)")
+    ax.set_title("Calibration on the test split")
+    ax.legend(loc="upper left", fontsize=7)
     plotting.save(fig, FIGURES / "reliability.png")
 
-    # Coverage vs accuracy.
-    fig, ax = plt.subplots(figsize=(5.5, 3.6))
-    cc = out["coverage_curve_test"]
-    ax.plot([r["coverage"] for r in cc], [r["accuracy"] for r in cc], lw=2, color=plotting.SERIES[0],
-            marker="o", ms=4)
-    cal = out["calibration"]
-    ax.axvline(cal["test_coverage_at_threshold"], color=plotting.INK_2, lw=1, ls="--")
-    ax.text(cal["test_coverage_at_threshold"] - 0.01, min(r["accuracy"] for r in cc),
-            f"95% target\n{cal['test_coverage_at_threshold']:.0%} answered", ha="right",
-            fontsize=8, color=plotting.INK_2)
+    # Coverage vs share correct, with each variant's own validation threshold.
+    fig, ax = plt.subplots(figsize=(6.5, 4))
+    for v in VARIANTS:
+        cc = out["variants"][v]["coverage_curve_test"]
+        ab = out["variants"][v]["abstention"]
+        ax.plot([r["coverage"] for r in cc], [r["accuracy"] for r in cc], lw=2, color=COLOR[v], label=LABEL[v])
+        ax.scatter([ab["test_coverage"]], [ab["test_correct_rate_among_handled"]], s=60, color=COLOR[v],
+                   edgecolor=plotting.SURFACE, linewidth=1.5, zorder=4)
+    ax.axhline(0.95, color=plotting.INK_2, lw=1, ls="--")
+    ax.text(0.52, 0.952, "95% validation target (not a test guarantee)", ha="right", va="bottom",
+            fontsize=7, color=plotting.INK_2)
     ax.invert_xaxis()
-    ax.set_xlabel("Share of clauses the model answers (coverage)")
-    ax.set_ylabel("Accuracy on answered clauses")
-    ax.set_title("Abstaining on low-confidence clauses")
+    ax.set_xlabel("Share of test clauses handled (coverage)")
+    ax.set_ylabel("Share correct among handled clauses")
+    ax.set_title("Abstention: dots = each variant's validation threshold")
+    ax.legend(loc="lower left", fontsize=8)
     plotting.save(fig, FIGURES / "coverage_accuracy.png")
 
 

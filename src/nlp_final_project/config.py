@@ -17,10 +17,14 @@ FIGURES = REPORTS / "figures"
 
 SEED = 42
 DATASET = ("coastalcph/lex_glue", "ledgar")
+# Hub revisions (commit SHAs) pinned so a rebuild downloads exactly what we used.
+DATASET_REVISION = "c23fdff1a6bf74e0e1a71cb86f1e781d37da888c"
 
 # LEDGAR is English (US SEC filings), so we use an English legal-domain BERT.
 CLASSIFIER_MODEL = "nlpaueb/legal-bert-base-uncased"
+CLASSIFIER_REVISION = "15b570cbf88259610b082a167dacc190124f60f6"
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+EMBEDDING_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
 
 for _d in (ARTIFACTS, REPORTS, FIGURES):
     _d.mkdir(parents=True, exist_ok=True)

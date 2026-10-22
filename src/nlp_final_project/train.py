@@ -9,8 +9,18 @@ Run:  uv run nlp-final-project train                  # full run
       uv run nlp-final-project train --max-train 2000 --epochs 1   # smoke test
 
 Progress is written to artifacts/progress.json; a full checkpoint (weights,
-optimiser, scheduler, position in the epoch) to artifacts/checkpoint/ every
-`ckpt_every` steps, so an interrupted run loses at most a few minutes.
+optimiser, scheduler, position in the epoch, RNG states, configuration) to
+artifacts/classifier_checkpoint/ every `ckpt_every` steps, so an interrupted run
+loses at most a few minutes.
+
+Resuming is refused when the configuration differs from the checkpoint's. In
+particular `--resume --epochs 3` cannot extend a finished 2-epoch run: its
+learning-rate schedule was built for 2 epochs and has already decayed to zero.
+Extending training is a new experiment with its own schedule.
+
+Determinism: data order and RNG states are restored exactly, but kernels on the
+Apple GPU (MPS) and bfloat16 autocast are not guaranteed bit-reproducible, so a
+resumed run is equivalent in procedure, not proven numerically identical.
 """
 
 from __future__ import annotations
@@ -29,7 +39,8 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
-from .config import ARTIFACTS, CLASSIFIER_MODEL, REPORTS, SEED, get_device, save_json, set_seed
+from .config import (ARTIFACTS, CLASSIFIER_MODEL, CLASSIFIER_REVISION, REPORTS, SEED, get_device, save_json,
+                     set_seed)
 from .data import label_names, split_arrays
 from .metrics import core_metrics
 
@@ -37,6 +48,7 @@ from .metrics import core_metrics
 @dataclass
 class TrainConfig:
     model_name: str = CLASSIFIER_MODEL
+    model_revision: str = CLASSIFIER_REVISION
     max_length: int = 256  # covers ~88% of clauses; 512 covers ~98% but doubles cost (see EDA)
     batch_size: int = 16
     eval_batch_size: int = 64
@@ -134,19 +146,58 @@ def _free(device) -> None:
 
 
 # ---------------------------------------------------------------- train ----
-def _has_safetensors(name: str) -> bool:
+def _has_safetensors(name: str, revision: str | None = None) -> bool:
     """Legal-BERT only ships pytorch_model.bin. Without this check, transformers
     tries to fetch a safetensors conversion from a Hub pull request, which can hang."""
-    from pathlib import Path
-
     if Path(name).is_dir():
         return any(Path(name).glob("*.safetensors"))
     try:
         from huggingface_hub import list_repo_files
 
-        return any(f.endswith(".safetensors") for f in list_repo_files(name))
+        return any(f.endswith(".safetensors") for f in list_repo_files(name, revision=revision))
     except Exception:
         return False
+
+
+# Settings that define the optimisation trajectory; they must match to resume.
+RESUME_KEYS = ("model_name", "model_revision", "max_length", "batch_size", "lr", "weight_decay",
+               "warmup_ratio", "epochs", "grad_clip", "amp", "seed", "max_train", "max_val")
+
+
+class ResumeError(RuntimeError):
+    pass
+
+
+def check_resume_compatible(saved_cfg: dict | None, cfg: "TrainConfig") -> None:
+    if saved_cfg is None:
+        raise ResumeError("checkpoint has no saved configuration (written by an older version); "
+                          "its compatibility cannot be verified, so it is not resumed")
+    current = asdict(cfg)
+    diff = {k: (saved_cfg.get(k), current[k]) for k in RESUME_KEYS if saved_cfg.get(k) != current[k]}
+    if diff:
+        lines = ", ".join(f"{k}: checkpoint={a!r} now={b!r}" for k, (a, b) in diff.items())
+        hint = (" Changing `epochs` would not extend training: the LR schedule of the checkpoint "
+                "was built for its own number of epochs." if "epochs" in diff else "")
+        raise ResumeError(f"configuration differs from the checkpoint ({lines}).{hint}")
+
+
+def rng_state() -> dict:
+    s = {"python": random.getstate(), "numpy": np.random.get_state(), "torch": torch.get_rng_state()}
+    if torch.cuda.is_available():
+        s["cuda"] = torch.cuda.get_rng_state_all()
+    if torch.backends.mps.is_available():
+        s["mps"] = torch.mps.get_rng_state()
+    return s
+
+
+def set_rng_state(s: dict) -> None:
+    random.setstate(s["python"])
+    np.random.set_state(s["numpy"])
+    torch.set_rng_state(s["torch"])
+    if "cuda" in s and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(s["cuda"])
+    if "mps" in s and torch.backends.mps.is_available():
+        torch.mps.set_rng_state(s["mps"])
 
 
 def train(cfg: TrainConfig) -> dict:
@@ -163,12 +214,13 @@ def train(cfg: TrainConfig) -> dict:
     if cfg.max_val:
         Xva, yva = Xva[: cfg.max_val], yva[: cfg.max_val]
 
-    tok = AutoTokenizer.from_pretrained(cfg.model_name)
+    tok = AutoTokenizer.from_pretrained(cfg.model_name, revision=cfg.model_revision)
     enc_tr = tokenize(tok, Xtr, cfg.max_length)
     enc_va = tokenize(tok, Xva, cfg.max_length)
 
     model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.model_name, num_labels=len(names), use_safetensors=_has_safetensors(cfg.model_name),
+        cfg.model_name, revision=cfg.model_revision, num_labels=len(names),
+        use_safetensors=_has_safetensors(cfg.model_name, cfg.model_revision),
         id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
     ).to(device)
 
@@ -192,12 +244,17 @@ def train(cfg: TrainConfig) -> dict:
     st = {"epoch": 0, "step_in_epoch": 0, "step": 0, "best": -1.0, "bad_epochs": 0,
           "running": 0.0, "seen": 0, "elapsed": 0.0}
     ckpt = Path(cfg.output_dir + "_checkpoint") / "state.pt"
+    default_run = Path(cfg.output_dir) == ARTIFACTS / "classifier"
+    progress_path = ARTIFACTS / "progress.json" if default_run else Path(cfg.output_dir + "_progress.json")
     if cfg.resume and ckpt.exists():
         saved = torch.load(ckpt, map_location="cpu", weights_only=False)
+        check_resume_compatible(saved.get("config"), cfg)
         model.load_state_dict(saved["model"])
         optim.load_state_dict(saved["optim"])
         sched.load_state_dict(saved["sched"])
         st, log["epochs"] = saved["state"], saved["epochs"]
+        if "rng" in saved:
+            set_rng_state(saved["rng"])
         print(f"resumed at epoch {st['epoch'] + 1}, step {st['step']}/{total}")
 
     def save_checkpoint():
@@ -205,7 +262,7 @@ def train(cfg: TrainConfig) -> dict:
         st["elapsed"] = base + time.time() - t_start
         tmp = ckpt.with_suffix(".tmp")
         torch.save({"model": model.state_dict(), "optim": optim.state_dict(), "sched": sched.state_dict(),
-                    "state": st, "epochs": log["epochs"]}, tmp)
+                    "state": st, "epochs": log["epochs"], "config": asdict(cfg), "rng": rng_state()}, tmp)
         tmp.replace(ckpt)  # atomic: an interruption never leaves a corrupt checkpoint
 
     def report(phase: str):
@@ -216,7 +273,7 @@ def train(cfg: TrainConfig) -> dict:
                    "total_steps": total, "percent": round(100 * st["step"] / total, 1),
                    "train_loss": st["running"] / max(st["seen"], 1),
                    "elapsed_min": round(el / 60, 1), "eta_min": round(eta, 1) if eta else None,
-                   "val_history": log["epochs"]}, ARTIFACTS / "progress.json")
+                   "val_history": log["epochs"]}, progress_path)
 
     step0, base, t_start = st["step"], st["elapsed"], time.time()
     for epoch in range(st["epoch"], cfg.epochs):
@@ -274,7 +331,8 @@ def train(cfg: TrainConfig) -> dict:
     log["best_val_macro_f1"] = st["best"]
     log["train_minutes"] = (base + time.time() - t_start) / 60
     report("finished")
-    save_json(log, REPORTS / "train_log.json")
+    # Only the default run writes the committed report; smoke tests stay in their own folder.
+    save_json(log, REPORTS / "train_log.json" if default_run else Path(cfg.output_dir + "_train_log.json"))
     return log
 
 

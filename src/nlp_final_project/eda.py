@@ -14,7 +14,7 @@ from scipy.spatial.distance import jensenshannon
 from transformers import AutoTokenizer
 
 from . import plotting
-from .config import CLASSIFIER_MODEL, FIGURES, REPORTS, save_json
+from .config import CLASSIFIER_MODEL, CLASSIFIER_REVISION, FIGURES, REPORTS, save_json
 from .data import label_names, load_ledgar
 from .slices import compute_slices
 
@@ -53,7 +53,7 @@ def run() -> dict:
     ]
 
     # --- lengths -------------------------------------------------------------
-    tok = AutoTokenizer.from_pretrained(CLASSIFIER_MODEL)
+    tok = AutoTokenizer.from_pretrained(CLASSIFIER_MODEL, revision=CLASSIFIER_REVISION)
     sample = list(ds["train"].shuffle(seed=0).select(range(5000))["text"])
     n_tok = np.array([len(x) for x in tok(sample, add_special_tokens=True)["input_ids"]])
     n_words = np.array([len(t.split()) for t in ds["train"]["text"]])

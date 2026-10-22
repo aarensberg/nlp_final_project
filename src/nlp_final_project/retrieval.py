@@ -9,6 +9,15 @@
 - Constraints  = a "N-day" period in the question is extracted and enforced as a filter,
                  because embeddings are bad at numbers.
 
+Limits of the period filter (`day_periods`): it checks that a clause MENTIONS a
+duration of N days, not that this duration plays the requested legal role (a
+"30-day notice period" query also matches "payment within 30 days"). Business
+and calendar days are not distinguished, and number words outside a short list
+("thirty-one days") are missed unless digits are also written.
+
+The index is stored with the fingerprint of everything that produced it
+(encoder + revision, sequence length, clause bank). A mismatch triggers a rebuild.
+
 Run: uv run nlp-final-project index        # build + evaluate
      uv run nlp-final-project search "show me termination clauses with a 30-day notice period"
 """
@@ -27,8 +36,9 @@ import numpy as np
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
 
-from .config import ARTIFACTS, EMBEDDING_MODEL, REPORTS, SEED, get_device, save_json
+from .config import ARTIFACTS, EMBEDDING_MODEL, EMBEDDING_REVISION, REPORTS, SEED, get_device, save_json
 from .data import label_names, split_arrays
+from .fingerprint import sha256_file, sha256_texts
 
 INDEX_DIR = ARTIFACTS / "clause_index"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "  # bge convention
@@ -70,7 +80,12 @@ def norm_hash(t: str) -> str:
 
 
 def day_periods(text: str) -> set[int]:
-    """All 'N day(s)' periods in a text: '30 days', '30-day', 'thirty (30) days', 'thirty days'."""
+    """All 'N day(s)' durations mentioned in a text.
+
+    Handles '30 days', '30-day', 'thirty (30) days', 'thirty days', '5 business days',
+    '10 calendar days'. Returns the numbers only: the role of the duration (notice,
+    payment, cure...) and the business/calendar distinction are NOT captured.
+    """
     t = text.lower()
     found = {int(n) for n in re.findall(r"\(?(\d{1,3})\)?[\s-]*(?:calendar |business )?days?\b", t)}
     for w, n in _NUM_WORDS.items():
@@ -82,9 +97,22 @@ def day_periods(text: str) -> set[int]:
 def encoder():
     from sentence_transformers import SentenceTransformer
 
-    m = SentenceTransformer(EMBEDDING_MODEL, device=str(get_device()))
-    m.max_seq_length = 256
+    m = SentenceTransformer(EMBEDDING_MODEL, revision=EMBEDDING_REVISION, device=str(get_device()))
+    m.max_seq_length = MAX_SEQ_LENGTH
     return m
+
+
+MAX_SEQ_LENGTH = 256
+
+
+def index_spec() -> dict:
+    """What the index depends on. Any change invalidates the stored index."""
+    X, y = split_arrays("train")
+    return {"encoder": EMBEDDING_MODEL, "encoder_revision": EMBEDDING_REVISION,
+            "max_seq_length": MAX_SEQ_LENGTH, "normalize_embeddings": True,
+            "bank": "LEDGAR train split, exact duplicates removed (lower-cased, whitespace-normalised; "
+                    "first occurrence kept)",
+            "train_sha256": sha256_texts(X, y)}
 
 
 @dataclass
@@ -119,13 +147,22 @@ class ClauseIndex:
         np.save(INDEX_DIR / "embeddings.npy", emb)
         np.save(INDEX_DIR / "labels.npy", labels)
         (INDEX_DIR / "texts.json").write_text(json.dumps(texts))
-        save_json({"model": EMBEDDING_MODEL, "n_clauses": len(texts), "dim": int(emb.shape[1]),
+        save_json({"spec": index_spec(), "n_clauses": len(texts), "dim": int(emb.shape[1]),
+                   "embeddings_sha256": sha256_file(INDEX_DIR / "embeddings.npy"),
                    "encode_seconds": time.time() - t0}, INDEX_DIR / "meta.json")
         return cls(texts, labels, emb)
 
     @classmethod
-    def load(cls) -> "ClauseIndex":
-        if not (INDEX_DIR / "embeddings.npy").exists():
+    def load(cls, verify_files: bool = True) -> "ClauseIndex":
+        meta_path = INDEX_DIR / "meta.json"
+        if not (INDEX_DIR / "embeddings.npy").exists() or not meta_path.exists():
+            return cls.build()
+        meta = json.loads(meta_path.read_text())
+        if meta.get("spec") != index_spec():
+            print("[index] stored index was built with a different encoder/config/bank; rebuilding")
+            return cls.build()
+        if verify_files and sha256_file(INDEX_DIR / "embeddings.npy") != meta.get("embeddings_sha256"):
+            print("[index] embeddings file does not match its recorded fingerprint; rebuilding")
             return cls.build()
         return cls(json.loads((INDEX_DIR / "texts.json").read_text()),
                    np.load(INDEX_DIR / "labels.npy"), np.load(INDEX_DIR / "embeddings.npy"))
@@ -201,8 +238,12 @@ class ClauseIndex:
 
 
 # ------------------------------------------------------- evaluation ----
-# Natural-language questions a lawyer might type, with the clause types that answer
-# them. Near-synonym LEDGAR labels are accepted together (they are the same concept).
+# 40 natural-language questions written by the authors BEFORE any retrieval result
+# was seen, with the LEDGAR labels accepted as relevant (near-synonym labels are
+# accepted together, e.g. Governing Laws / Applicable Laws). This is a sanity check
+# of the demo use case, not an independent legal benchmark: the questions and the
+# relevance criteria come from the same people who built the system. They must not
+# be edited after looking at results.
 QUESTIONS: list[tuple[str, list[str]]] = [
     ("Which law governs this agreement?", ["Governing Laws", "Applicable Laws"]),
     ("show me termination clauses with a 30-day notice period", ["Terminations"]),
@@ -289,10 +330,17 @@ def evaluate(index: ClauseIndex) -> dict:
     worst = sorted(((k, float(np.mean(v))) for k, v in per_label_p10["hybrid"].items()), key=lambda kv: kv[1])
     out["clause_to_clause_worst_labels_hybrid_p@10"] = worst[:10]
 
+    out["clause_to_clause_protocol"] = (
+        "Queries: test clauses sampled per class (up to 10 per class -> 981 queries; classes with "
+        "fewer test clauses contribute all of them). Bank: de-duplicated train split. A retrieved "
+        "clause is relevant iff it has the same LEDGAR label as the query. Exact duplicates of the "
+        "query (normalised text) are removed from the results before scoring.")
+
     # 2) lawyer questions -> clause types (+ day-period constraint satisfaction).
-    qres = []
+    qres, per_question = [], []
     for mode in ("dense", "bm25", "hybrid"):
         for enforce in ((False, True) if mode == "hybrid" else (False,)):
+            name = mode + (" + period filter" if enforce else "")
             p10, p1, period_ok = [], [], []
             for q, ok_labels in QUESTIONS:
                 hits = index.search(q, 10, mode=mode, is_question=True, enforce_periods=enforce)
@@ -300,13 +348,29 @@ def evaluate(index: ClauseIndex) -> dict:
                 p10.append(np.mean(rel) if rel else 0.0)
                 p1.append(float(rel[0]) if rel else 0.0)
                 want = day_periods(q)
+                pm = [bool(want & day_periods(h.text)) for h in hits] if want else None
                 if want:
-                    period_ok.append(np.mean([bool(want & day_periods(h.text)) for h in hits]))
-            qres.append({"mode": mode + (" + period filter" if enforce else ""),
-                         "p@1": float(np.mean(p1)), "p@10": float(np.mean(p10)),
-                         "period_match@10 (constraint questions)": float(np.mean(period_ok))})
+                    period_ok.append(np.mean(pm) if pm else 0.0)
+                per_question.append({
+                    "mode": name, "question": q, "accepted_labels": ok_labels, "n_hits": len(hits),
+                    "p@1": p1[-1], "p@10": p10[-1],
+                    "requested_days": sorted(want) if want else None,
+                    "hits": [{"rank": h.rank, "label": h.label, "relevant": r,
+                              "mentions_requested_days": (pm[j] if pm else None),
+                              "text": h.text[:240]} for j, (h, r) in enumerate(zip(hits, rel))],
+                })
+            qres.append({"mode": name, "p@1": float(np.mean(p1)), "p@10": float(np.mean(p10)),
+                         "period_match@10 (constraint questions)": float(np.mean(period_ok)),
+                         "n_constraint_questions": len(period_ok)})
     out["questions"] = qres
     out["n_questions"] = len(QUESTIONS)
+    out["questions_protocol"] = (
+        "40 hand-written questions (fixed before results), hybrid/dense/BM25 top-10. Relevant iff the "
+        "hit's LEDGAR label is in the accepted list for that question. p@10 is computed over the hits "
+        "returned (fewer than 10 if the period filter leaves fewer). period_match@10 = share of hits "
+        "that MENTION the requested number of days, whatever its legal role.")
+    save_json({"protocol": out["questions_protocol"], "results": per_question},
+              REPORTS / "retrieval_questions.json")
 
     # Show the headline example in the report.
     demo = QUESTIONS[1][0]
@@ -332,8 +396,15 @@ def cli_search(argv=None):
     p.add_argument("--mode", default="hybrid", choices=["dense", "bm25", "hybrid"])
     p.add_argument("--clause", action="store_true", help="query is a pasted clause, not a question")
     a = p.parse_args(argv)
-    for h in ClauseIndex.load().search(a.query, a.k, a.mode, is_question=not a.clause):
-        print(f"[{h.rank}] {h.label}  ({h.score:.3f})\n    {h.text[:400]}\n")
+    hits = ClauseIndex.load().search(a.query, a.k, a.mode, is_question=not a.clause)
+    wanted = day_periods(a.query) if not a.clause else set()
+    if wanted:
+        print(f"(period filter: only clauses mentioning {sorted(wanted)} day(s); the role of the "
+              f"duration is not checked)\n")
+    if not hits:
+        print("no clause in the bank matches this query" + (" and its period filter" if wanted else ""))
+    for h in hits:
+        print(f"[{h.rank}] {h.label}  (score {h.score:.3f})\n    {h.text[:400]}\n")
 
 
 if __name__ == "__main__":

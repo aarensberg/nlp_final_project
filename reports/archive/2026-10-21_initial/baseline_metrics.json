@@ -1,0 +1,18 @@
+{
+  "model": "tfidf(1-2gram)+logreg",
+  "train_seconds": 216.9629762172699,
+  "validation": {
+    "n": 10000,
+    "accuracy": 0.8797,
+    "micro_f1": 0.8797,
+    "macro_f1": 0.8188420577829894,
+    "weighted_f1": 0.8767967919771598
+  },
+  "test": {
+    "n": 10000,
+    "accuracy": 0.877,
+    "micro_f1": 0.877,
+    "macro_f1": 0.8219376759941999,
+    "weighted_f1": 0.8733171991864076
+  }
+}

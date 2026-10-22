@@ -5,13 +5,14 @@ import sys
 USAGE = """usage: nlp-final-project <command> [options]
 
   eda        explore LEDGAR (imbalance, lengths, leakage, slices)
-  baseline   TF-IDF + logistic regression
-  train      fine-tune Legal-BERT (see `train --help`)
-  evaluate   held-out test evaluation, calibration, abstention
-  index      build + evaluate the clause-bank retrieval index
-  search     query the clause bank: search "termination with 30 days notice"
-  audit      bias and failure-mode audit
-  all        eda, baseline, train, evaluate, index, audit in order
+  baseline   train the TF-IDF + logistic regression baseline (~5 min, CPU)
+  train      fine-tune Legal-BERT (~2.5 h on an Apple M3; see `train --help`)
+  evaluate   fit inference parameters on validation, evaluate 3 variants on test
+  classify   predict the type of a clause:  classify "This Agreement shall be governed by ..."
+  index      build (if needed) + evaluate the clause-bank retrieval index
+  search     query the clause bank:  search "termination with 30 days notice"
+  audit      bias and failure-mode audit (needs `evaluate` first)
+  all        eda, evaluate, index, audit  (never trains; needs existing models)
 """
 
 
@@ -30,7 +31,11 @@ def main() -> None:
         cli(args)
     elif cmd == "evaluate":
         from .evaluate import run
-        print(json.dumps(run(), indent=2)[:3000])
+        out = run()
+        print(json.dumps({v: r["test"] for v, r in out["variants"].items()}, indent=2))
+    elif cmd == "classify":
+        from .inference import cli_classify
+        cli_classify(args)
     elif cmd == "index":
         from .retrieval import cli_index
         cli_index()
@@ -39,10 +44,16 @@ def main() -> None:
         cli_search(args)
     elif cmd == "audit":
         from .audit import run
-        print(json.dumps(run(), indent=2)[:3000])
+        run()
+        print("audit written to reports/audit.json and reports/figures/")
     elif cmd == "all":
-        from . import audit, baseline, eda, evaluate, retrieval, train
-        eda.run(); baseline.run(); train.cli(args); evaluate.run()  # noqa: E702
-        retrieval.cli_index(); audit.run()  # noqa: E702
+        from .config import ARTIFACTS
+        missing = [p for p in (ARTIFACTS / "classifier" / "model.safetensors", ARTIFACTS / "baseline.joblib")
+                   if not p.exists()]
+        if missing:
+            sys.exit("missing models: " + ", ".join(map(str, missing))
+                     + "\nrun `baseline` and `train` explicitly first (training takes hours).")
+        from . import audit, eda, evaluate, retrieval
+        eda.run(); evaluate.run(); retrieval.cli_index(); audit.run()  # noqa: E702
     else:
         print(USAGE)
