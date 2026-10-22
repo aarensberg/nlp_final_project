@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Soutenance NLP · LEDGAR</title>
+<title>NLP Defense · LEDGAR</title>
 <style>
 :root{
   --bg:#0f172a; --panel:#1e293b; --edge:#475569; --fg:#e2e8f0; --muted:#94a3b8;
@@ -77,64 +77,64 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 <div id="viewport"><div id="stage">
 
 <!-- 1 ─ Titre -->
-<section class="slide" data-who="A" data-section="Ouverture"
- data-notes="Présenter le sujet et l'équipe ; annoncer la répartition. Dire « prototype de recherche » dès maintenant.">
+<section class="slide" data-who="A" data-section="Opening"
+ data-notes="Introduce the topic and the team; announce who covers what. Say “research prototype” right away.">
   <div class="title-wrap">
-    <div class="kicker">Deep Learning for Sequential Data &amp; NLP · Projet final</div>
-    <h1>Cœur NLP d'un assistant<br>de revue de contrats</h1>
-    <div class="sub">Classer les clauses, retrouver des précédents, et documenter où l'on peut — et ne peut pas — faire confiance au système. Données : LEDGAR (LexGLUE).</div>
-    <div class="badge">Prototype de recherche · clauses anglaises (SEC) · ne remplace pas un avocat</div>
+    <div class="kicker">Deep Learning for Sequential Data &amp; NLP · Final project</div>
+    <h1>NLP core of a<br>contract-review assistant</h1>
+    <div class="sub">Classify clauses, retrieve precedents, and document where the system can — and cannot — be trusted. Data: LEDGAR (LexGLUE).</div>
+    <div class="badge">Research prototype · English clauses (SEC) · not a substitute for a lawyer</div>
     <div class="team">
-      <div style="color:var(--alessandro)">Alessandro · problème, données, conclusion</div>
+      <div style="color:var(--alessandro)">Alessandro · problem, data, conclusion</div>
       <div style="color:var(--charles)">Charles · classification</div>
-      <div style="color:var(--louis)">Louis · recherche, audit, reproductibilité</div>
+      <div style="color:var(--louis)">Louis · retrieval, audit, reproducibility</div>
     </div>
   </div>
 </section>
 
 <!-- 2 ─ Besoin métier -->
-<section class="slide" data-who="A" data-section="Problème" data-video="S02BusinessNeed"
- data-notes="Trois besoins : classer (100 types), retrouver, prouver / signaler. Clients européens : pas de boîte noire. <span class='w'>⚠ Ne pas dire que le système « comprend » les contrats.</span>"></section>
+<section class="slide" data-who="A" data-section="Problem" data-video="S02BusinessNeed"
+ data-notes="Three needs: classify (100 types), retrieve, prove / flag. European clients: no black box. <span class='w'>⚠ Do not say the system “understands” contracts.</span>"></section>
 
 <!-- 3 ─ Pourquoi LEDGAR -->
-<section class="slide" data-who="A" data-section="Données · pourquoi LEDGAR" data-video="S03DataSplit"
- data-notes="Seul jeu public annoté à cette échelle + benchmark LexGLUE. Découpage chronologique 60k / 10k / 10k. Règle : réglages sur la validation, test = mesure uniquement."></section>
+<section class="slide" data-who="A" data-section="Data · why LEDGAR" data-video="S03DataSplit"
+ data-notes="Only public annotated dataset at this scale + LexGLUE benchmark. Chronological split 60k / 10k / 10k. Rule: tuning on validation, test = measurement only."></section>
 
 <!-- 4 ─ Limites LEDGAR -->
-<section class="slide" data-who="A" data-section="Données · limites" data-video="S04DataLimits"
- data-notes="Déséquilibre ×138 → macro-F1. Anglais / droit US ; 253 clauses train hors États-Unis (proxy mots-clés). Types absents : RGPD, force majeure, non-concurrence, limitation de responsabilité. 282 doublons test/train. <span class='w'>⚠ « hors États-Unis », pas « européennes ».</span>"></section>
+<section class="slide" data-who="A" data-section="Data · limitations" data-video="S04DataLimits"
+ data-notes="Imbalance ×138 → macro-F1. English / US law; 253 training clauses outside the United States (keyword proxy). Missing types: GDPR, force majeure, non-compete, limitation of liability. 282 test/train duplicates. <span class='w'>⚠ “outside the United States”, not “European”.</span>"></section>
 
 <!-- 5 ─ Architecture -->
 <section class="slide" data-who="A" data-to="C" data-section="Architecture" data-video="S05Architecture"
- data-notes="Deux chaînes. Classification : BERT + TF-IDF calibrés, poids 0,2 / 0,8, seuil 0,709 → type ou juriste. Recherche : filtre N jours → dense + BM25 → RRF. Trois variantes rapportées. Passage à Charles."></section>
+ data-notes="Two pipelines. Classification: calibrated BERT + TF-IDF, weights 0.2 / 0.8, threshold 0.709 → type or lawyer. Retrieval: N-day filter → dense + BM25 → RRF. Three variants reported. Hand over to Charles."></section>
 
 <!-- 6 ─ TF-IDF -->
 <section class="slide" data-who="C" data-section="Classification · baseline"
- data-notes="Un baseline fort rend la comparaison crédible. LEDGAR : le type tient souvent à des mots-clés. <span class='w'>⚠ Comparaison LexGLUE indicative : même test, protocole différent.</span>">
+ data-notes="A strong baseline makes the comparison credible. LEDGAR: the type often hinges on keywords. <span class='w'>⚠ LexGLUE comparison is indicative: same test, different protocol.</span>">
   <div class="body">
-    <h1>Baseline : TF-IDF + régression logistique</h1>
+    <h1>Baseline: TF-IDF + logistic regression</h1>
     <div class="cols">
       <div>
         <div class="card g" style="margin-bottom:24px">
-          <h2 class="green">Ce que c'est</h2>
+          <h2 class="green">What it is</h2>
           <ul>
-            <li>Vecteurs TF-IDF sur unigrammes et bigrammes</li>
-            <li>Régression logistique sur les 100 types</li>
-            <li>≈ 4 min d'entraînement sur CPU</li>
+            <li>TF-IDF vectors over unigrams and bigrams</li>
+            <li>Logistic regression over the 100 types</li>
+            <li>≈ 4 min of training on CPU</li>
           </ul>
         </div>
         <div class="card">
-          <h2>Pourquoi il est difficile à battre</h2>
-          <p>Sur LEDGAR, le type d'une clause tient souvent à quelques mots-clés : <span class="green">« governing law »</span>, <span class="green">« counterparts »</span>, <span class="green">« severability »</span>. Un modèle lexical les capte très bien.</p>
+          <h2>Why it is hard to beat</h2>
+          <p>On LEDGAR, a clause's type often hinges on a few keywords: <span class="green">“governing law”</span>, <span class="green">“counterparts”</span>, <span class="green">“severability”</span>. A lexical model captures them very well.</p>
         </div>
       </div>
       <div style="display:flex;flex-direction:column">
         <div class="kpis">
-          <div class="kpi"><div class="big green">87,70</div><div class="lbl">micro-F1 test [87,02 ; 88,37]</div></div>
-          <div class="kpi"><div class="big green">82,19</div><div class="lbl">macro-F1 test [80,52 ; 83,00]</div></div>
+          <div class="kpi"><div class="big green">87.70</div><div class="lbl">test micro-F1 [87.02; 88.37]</div></div>
+          <div class="kpi"><div class="big green">82.19</div><div class="lbl">test macro-F1 [80.52; 83.00]</div></div>
         </div>
-        <p class="note" style="margin-top:10px">Référence publiée (LexGLUE, Chalkidis et al. 2022, tableau 3) : TF-IDF + SVM <b>87,0 / 81,4</b>.</p>
-        <div class="caution">Comparaison indicative : même test, mais autre protocole (SVM 1-3 grammes avec recherche de grille).</div>
+        <p class="note" style="margin-top:10px">Published reference (LexGLUE, Chalkidis et al. 2022, Table 3): TF-IDF + SVM <b>87.0 / 81.4</b>.</p>
+        <div class="caution">Indicative comparison: same test, but a different protocol (1-3-gram SVM with grid search).</div>
       </div>
     </div>
   </div>
@@ -142,27 +142,27 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 
 <!-- 7 ─ Legal-BERT -->
 <section class="slide" data-who="C" data-section="Classification · Legal-BERT"
- data-notes="Legal-BERT plutôt que CamemBERT (données anglaises). Boucle PyTorch maison. Budget portable : 2 époques, 256 tokens, 146 min, un seul run sans reprise. <span class='w'>⚠ 74,0 → 77,6 = ancienne définition du macro-F1 (trace historique).</span>">
+ data-notes="Legal-BERT rather than CamemBERT (English data). Hand-written PyTorch loop. Laptop budget: 2 epochs, 256 tokens, 146 min, a single run with no resume. <span class='w'>⚠ 74.0 → 77.6 = old macro-F1 definition (historical trace).</span>">
   <div class="body">
-    <h1>Fine-tuning de Legal-BERT</h1>
+    <h1>Fine-tuning Legal-BERT</h1>
     <div class="cols" style="grid-template-columns:1.15fr 1fr">
       <table>
-        <tr><th>Choix</th><th>Valeur</th><th>Raison</th></tr>
-        <tr><td>Modèle</td><td class="orange">legal-bert-base-uncased</td><td class="muted">anglais juridique ; CamemBERT est français</td></tr>
-        <tr><td>Longueur</td><td>256 tokens</td><td class="muted">88 % des clauses entières ; 512 saturait 16 Go</td></tr>
-        <tr><td>Budget</td><td>2 époques · 1 graine (42)</td><td class="muted">portable Apple M3, 146 min</td></tr>
-        <tr><td>Optim.</td><td>AdamW 3·10⁻⁵, warm-up 6 %, bf16</td><td class="muted">recette BERT standard</td></tr>
-        <tr><td>Boucle</td><td>PyTorch écrite à la main</td><td class="muted">lots par longueur, checkpoints reprenables</td></tr>
+        <tr><th>Choice</th><th>Value</th><th>Reason</th></tr>
+        <tr><td>Model</td><td class="orange">legal-bert-base-uncased</td><td class="muted">legal English; CamemBERT is French</td></tr>
+        <tr><td>Length</td><td>256 tokens</td><td class="muted">88% of clauses kept whole; 512 saturated 16 GB</td></tr>
+        <tr><td>Budget</td><td>2 epochs · 1 seed (42)</td><td class="muted">Apple M3 laptop, 146 min</td></tr>
+        <tr><td>Optim.</td><td>AdamW 3·10⁻⁵, warm-up 6%, bf16</td><td class="muted">standard BERT recipe</td></tr>
+        <tr><td>Loop</td><td>hand-written PyTorch</td><td class="muted">length-bucketed batches, resumable checkpoints</td></tr>
       </table>
       <div style="display:flex;flex-direction:column;gap:22px">
         <div class="card o">
-          <h2 class="orange">Validation pendant l'entraînement</h2>
-          <p>macro-F1 : <b>74,0</b> (époque 1) → <b>77,6</b> (époque 2)</p>
-          <p class="note">Il montait encore. Valeurs de la trace d'entraînement (définition de l'époque : labels présents seulement).</p>
+          <h2 class="orange">Validation during training</h2>
+          <p>macro-F1: <b>74.0</b> (epoch 1) → <b>77.6</b> (epoch 2)</p>
+          <p class="note">It was still rising. Values from the training trace (definition used at the time: present labels only).</p>
         </div>
         <div class="card">
           <h2>Provenance</h2>
-          <p class="note" style="font-size:21px">Un seul processus, étape 0 → 7 500, sans reprise (prouvé par le journal). Reprise testée sur CPU uniquement.</p>
+          <p class="note" style="font-size:21px">A single process, step 0 → 7,500, with no resume (proven by the log). Resume tested on CPU only.</p>
         </div>
       </div>
     </div>
@@ -170,26 +170,26 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 </section>
 
 <!-- 8 ─ Résultats -->
-<section class="slide" data-who="C" data-section="Résultats" data-video="S08Results"
- data-notes="Résultat inconfortable : BERT seul &lt; TF-IDF (86,35 vs 87,70 micro ; 76,27 vs 82,19 macro ; queue 61,9 vs 74,3). Deux HYPOTHÈSES : 2 époques ; troncature (−3,9 pt sur clauses &gt; 200 mots, −0,3 sur 31-80). Combinaison 88,43 / 82,84. <span class='w'>⚠ Jamais « BERT est sous-entraîné » comme un fait. IC bootstrap probablement un peu trop étroits.</span>"></section>
+<section class="slide" data-who="C" data-section="Results" data-video="S08Results"
+ data-notes="Uncomfortable result: BERT alone &lt; TF-IDF (86.35 vs 87.70 micro; 76.27 vs 82.19 macro; tail 61.9 vs 74.3). Two HYPOTHESES: 2 epochs; truncation (−3.9 pt on clauses &gt; 200 words, −0.3 on 31-80). Ensemble 88.43 / 82.84. <span class='w'>⚠ Never “BERT is undertrained” stated as a fact. Bootstrap CIs probably somewhat too narrow.</span>"></section>
 
 <!-- 9 ─ Combinaison -->
-<section class="slide" data-who="C" data-section="Combinaison" data-video="S09Ensemble"
- data-notes="Moyenne pondérée des probabilités calibrées, poids choisi sur la validation. Gain +0,73 micro [+0,51 ; +0,98], +0,65 macro. McNemar : 106 contre 33. Signal complémentaire, pas une révolution. <span class='w'>⚠ McNemar teste le taux d'erreur, pas le macro-F1.</span>"></section>
+<section class="slide" data-who="C" data-section="Ensemble" data-video="S09Ensemble"
+ data-notes="Weighted average of calibrated probabilities, weight chosen on validation. Gain +0.73 micro [+0.51; +0.98], +0.65 macro. McNemar: 106 vs 33. A complementary signal, not a revolution. <span class='w'>⚠ McNemar tests the error rate, not macro-F1.</span>"></section>
 
 <!-- 10 ─ Abstention -->
-<section class="slide" data-who="C" data-to="L" data-section="Calibration et abstention" data-video="S10Abstention"
- data-notes="Températures sur la validation ; ECE 0,017. Seuil 0,709 = plus bas seuil atteignant 95 % sur la validation. Test : 84,2 % traitées, 94,5 % correctes ; ~1 clause sur 6 au juriste, c'est voulu. <span class='w'>⚠ 95 % = cible, pas garantie. Confiance = type, pas validité juridique.</span> Passage à Louis."></section>
+<section class="slide" data-who="C" data-to="L" data-section="Calibration and abstention" data-video="S10Abstention"
+ data-notes="Temperatures on validation; ECE 0.017. Threshold 0.709 = lowest threshold reaching 95% on validation. Test: 84.2% handled, 94.5% correct; ~1 clause in 6 goes to the lawyer, by design. <span class='w'>⚠ 95% = target, not a guarantee. Confidence = type, not legal validity.</span> Hand over to Louis."></section>
 
 <!-- 11 ─ Recherche -->
-<section class="slide" data-who="L" data-section="Recherche" data-video="S11Retrieval"
- data-notes="Banque 59 080 clauses. Dense (sens) + BM25 (mots exacts), fusion RRF 1/(60+rang). 981 requêtes : P@1 77,4 %, P@10 66,4 %. <span class='w'>⚠ Pertinence = même label. 40 questions déjà vues = non-régression (hybride P@1 92,5 %).</span>"></section>
+<section class="slide" data-who="L" data-section="Retrieval" data-video="S11Retrieval"
+ data-notes="Bank of 59,080 clauses. Dense (meaning) + BM25 (exact words), RRF fusion 1/(60+rank). 981 queries: P@1 77.4%, P@10 66.4%. <span class='w'>⚠ Relevance = same label. 40 already-seen questions = non-regression (hybrid P@1 92.5%).</span>"></section>
 
 <!-- 12 ─ Exemple réussi -->
-<section class="slide" data-who="L" data-section="Recherche · exemple réussi"
- data-notes="Formulation proche des clauses : 5/5 Terminations avec préavis de trente jours. Dire « sortie réelle enregistrée » si pas de démo live. Préparer : « regardez ce qui se passe si on reformule ».">
+<section class="slide" data-who="L" data-section="Retrieval · successful example"
+ data-notes="Wording close to the clauses: 5/5 Terminations with a thirty-day notice. Say “real recorded output” if there is no live demo. Set up: “look at what happens if we rephrase”.">
   <div class="body">
-    <h1>Exemple réussi : formulation proche d'une clause</h1>
+    <h1>Successful example: wording close to a clause</h1>
     <div class="term">
       <div class="cmd">$ nlp-final-project search "either party may terminate on thirty days written notice" -k 5</div>
       <div class="warn" style="margin:8px 0 12px">(period filter: clauses mentioning any of [30] day(s); 824 eligible. Mentioning a duration does not mean it is the requested notice period: the role of the duration is not checked)</div>
@@ -200,78 +200,78 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
       <div><span class="lab">[5] Terminations</span>  Either the Executive or the Company may terminate … upon not less than thirty (30) days prior written notice.</div>
     </div>
     <div style="display:flex;gap:24px;margin-top:22px;align-items:center">
-      <p style="font-size:30px"><b class="green">5 / 5</b> résultats de type <i>Terminations</i>, chacun avec un préavis de trente jours.</p>
+      <p style="font-size:30px"><b class="green">5 / 5</b> results of type <i>Terminations</i>, each with a thirty-day notice.</p>
     </div>
-    <div class="caution">Sortie réelle enregistrée (presentation/demo_outputs/3_search_success.txt), extraits abrégés. Un cas favorable ne valide pas la recherche.</div>
+    <div class="caution">Real recorded output (presentation/demo_outputs/3_search_success.txt), abridged excerpts. One favourable case does not validate retrieval.</div>
   </div>
 </section>
 
 <!-- 13 ─ Échec contrôlé -->
-<section class="slide" data-who="L" data-section="Recherche · échec contrôlé" data-video="S13ControlledFailure"
- data-notes="« show me termination clauses with a 30-day notice period » : 1er résultat Notices, 30 jours pour notifier une Good Reason ; 1er Terminations en 4e position ; 1 pertinent sur 10. Le filtre vérifie la MENTION, pas le rôle. Correction : extraction structurée (rôle + durée + type de jours). <span class='w'>⚠ Ne pas dire que la recherche comprend le préavis.</span>"></section>
+<section class="slide" data-who="L" data-section="Retrieval · controlled failure" data-video="S13ControlledFailure"
+ data-notes="“show me termination clauses with a 30-day notice period”: 1st result Notices, 30 days to give notice of a Good Reason; 1st Terminations in 4th position; 1 relevant out of 10. The filter checks the MENTION, not the role. Fix: structured extraction (role + duration + day type). <span class='w'>⚠ Do not say that retrieval understands notice periods.</span>"></section>
 
 <!-- 14 ─ Audit -->
 <section class="slide" data-who="L" data-section="Audit" data-video="S14Audit"
- data-notes="Groupes : bail 75,2 % vs 84,3 % attendu ; queue 84,3 % correctes après abstention. Contrefactuels : he↔she 2,3 %, juridiction 3,6 %, OCR 5,4 %. Hors périmètre : combinaison 8/8 abstentions ; BERT seul RGPD → General à 0,90. <span class='w'>⚠ Proxys par mots-clés ; groupes she (37) et hors US (36) trop petits ; type stable ≠ équivalence juridique.</span>"></section>
+ data-notes="Groups: leases 75.2% vs 84.3% expected; tail 84.3% correct after abstention. Counterfactuals: he↔she 2.3%, jurisdiction 3.6%, OCR 5.4%. Out of scope: ensemble 8/8 abstentions; BERT alone GDPR → General at 0.90. <span class='w'>⚠ Keyword proxies; she (37) and non-US (36) groups too small; stable type ≠ legal equivalence.</span>"></section>
 
 <!-- 15 ─ Reproductibilité -->
-<section class="slide" data-who="L" data-to="A" data-section="Reproductibilité" data-video="S15Reproducibility"
- data-notes="uv.lock, révisions figées, empreintes, manifeste ; 92 tests sur copie propre ; logits bit à bit. Non démontré : autre machine, variance entre graines, Python bêta. <span class='w'>⚠ « reproductible sur cette machine ».</span> Passage à Alessandro."></section>
+<section class="slide" data-who="L" data-to="A" data-section="Reproducibility" data-video="S15Reproducibility"
+ data-notes="uv.lock, pinned revisions, fingerprints, manifest; 92 tests on a clean copy; bit-identical logits. Not demonstrated: another machine, seed variance, beta Python. <span class='w'>⚠ “reproducible on this machine”.</span> Hand over to Alessandro."></section>
 
 <!-- 16 ─ Usages -->
-<section class="slide" data-who="A" data-section="Usages"
- data-notes="Traduire l'audit en règles d'usage. Insister : classer un type ≠ juger sa validité.">
+<section class="slide" data-who="A" data-section="Uses"
+ data-notes="Turn the audit into usage rules. Stress: classifying a type ≠ judging its validity.">
   <div class="body">
-    <h1>Usages autorisés et interdits</h1>
+    <h1>Permitted and prohibited uses</h1>
     <div class="cols roomy" style="grid-template-columns:1fr 1.25fr;align-items:start">
       <div class="card g">
-        <h2 class="green">Usage prévu</h2>
+        <h2 class="green">Intended use</h2>
         <ul>
-          <li>Aide au <b>tri</b> de clauses <b>anglaises</b> de type SEC</li>
-          <li>Relecture humaine <b>systématique</b></li>
-          <li>Clauses sous le seuil → <span class="amber">juriste</span></li>
-          <li>Recherche de précédents comme point de départ</li>
+          <li>Help with <b>triaging</b> SEC-style <b>English</b> clauses</li>
+          <li><b>Systematic</b> human review</li>
+          <li>Clauses below the threshold → <span class="amber">lawyer</span></li>
+          <li>Precedent search as a starting point</li>
         </ul>
       </div>
       <div class="card r">
-        <h2 class="red">Ne pas utiliser pour</h2>
+        <h2 class="red">Do not use for</h2>
         <ul>
-          <li>Décider seul du type ou de la portée d'une clause</li>
-          <li>Le droit européen, le français, l'allemand : non validé</li>
-          <li>Détecter exhaustivement risques ou clauses abusives</li>
-          <li>Les types absents : RGPD, force majeure, limitation de responsabilité…</li>
-          <li>Retrouver un préavis précis : filtre non sémantique</li>
-          <li>Conclure sur l'équité envers des personnes : proxys</li>
+          <li>Deciding a clause's type or scope alone</li>
+          <li>European law, French, German: not validated</li>
+          <li>Exhaustively detecting risks or unfair clauses</li>
+          <li>Missing types: GDPR, force majeure, limitation of liability…</li>
+          <li>Finding a specific notice period: non-semantic filter</li>
+          <li>Drawing fairness conclusions about people: proxies</li>
         </ul>
       </div>
     </div>
-    <div class="caution" style="margin-top:22px">Classer un type de clause n'est pas juger sa validité juridique.</div>
+    <div class="caution" style="margin-top:22px">Classifying a clause type is not judging its legal validity.</div>
   </div>
 </section>
 
 <!-- 17 ─ Limites -->
-<section class="slide" data-who="A" data-section="Limites et suite"
- data-notes="Assumer sans s'excuser ; montrer qu'on sait quoi faire ensuite. L'expérience 512 tokens / plus d'époques est proposée, pas faite.">
+<section class="slide" data-who="A" data-section="Limitations and next steps"
+ data-notes="Own it without apologising; show that we know what to do next. The 512-token / more-epochs experiment is proposed, not done.">
   <div class="body">
-    <h1>Limites et suite</h1>
+    <h1>Limitations and next steps</h1>
     <div class="cols roomy" style="align-items:start">
       <div class="card a">
-        <h2 class="amber">Limites mesurées</h2>
+        <h2 class="amber">Measured limitations</h2>
         <ul>
-          <li>BERT seul sous TF-IDF ; combinaison ≈ +0,7 pt</li>
-          <li>Labels quasi synonymes : <i>Applicable Laws / Governing Laws</i>, <i>Waivers / No Waivers</i></li>
-          <li>Clauses de bail et classes rares</li>
-          <li>Recherche : la notion de préavis n'est pas comprise</li>
-          <li>Une graine, une machine, Python bêta</li>
+          <li>BERT alone below TF-IDF; ensemble ≈ +0.7 pt</li>
+          <li>Near-synonymous labels: <i>Applicable Laws / Governing Laws</i>, <i>Waivers / No Waivers</i></li>
+          <li>Lease clauses and rare classes</li>
+          <li>Retrieval: the notion of notice period is not understood</li>
+          <li>One seed, one machine, beta Python</li>
         </ul>
       </div>
       <div class="card b">
-        <h2 class="blue">Suite proposée (non réalisée)</h2>
+        <h2 class="blue">Proposed next steps (not done)</h2>
         <ul>
-          <li>Expérience contrôlée : 256 vs 512 tokens, 2 vs plus d'époques avec arrêt anticipé, plusieurs graines</li>
-          <li>Clauses européennes annotées, types manquants</li>
-          <li>Extraction structurée des délais (rôle + durée + type de jours)</li>
-          <li>Fusion des quasi-synonymes validée par des juristes</li>
+          <li>Controlled experiment: 256 vs 512 tokens, 2 vs more epochs with early stopping, several seeds</li>
+          <li>Annotated European clauses, missing types</li>
+          <li>Structured extraction of deadlines (role + duration + day type)</li>
+          <li>Merging of near-synonyms validated by lawyers</li>
         </ul>
       </div>
     </div>
@@ -280,51 +280,51 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 
 <!-- 18 ─ Conclusion -->
 <section class="slide" data-who="A" data-section="Conclusion"
- data-notes="Trois messages, puis la recommandation. Finir sur « utile pour trier, pas pour décider », puis ouvrir aux questions.">
+ data-notes="Three messages, then the recommendation. End on “useful for triage, not for decisions”, then open the floor to questions.">
   <div class="body">
     <h1>Conclusion</h1>
     <div class="kpis">
-      <div class="kpi" style="border-color:var(--blue)"><div class="big blue">88,43</div><div class="lbl">micro-F1 test de la combinaison (macro 82,84)</div></div>
-      <div class="kpi" style="border-color:var(--amber)"><div class="big amber">84,2 %</div><div class="lbl">des clauses traitées, 94,5 % correctes parmi elles</div></div>
-      <div class="kpi" style="border-color:var(--green)"><div class="big green">92</div><div class="lbl">tests réussis · chiffres traçables</div></div>
+      <div class="kpi" style="border-color:var(--blue)"><div class="big blue">88.43</div><div class="lbl">ensemble test micro-F1 (macro 82.84)</div></div>
+      <div class="kpi" style="border-color:var(--amber)"><div class="big amber">84.2%</div><div class="lbl">of clauses handled, 94.5% correct among them</div></div>
+      <div class="kpi" style="border-color:var(--green)"><div class="big green">92</div><div class="lbl">tests passed · traceable numbers</div></div>
     </div>
     <ul style="margin-top:12px">
-      <li>Une chaîne complète : données → modèles → validation → test → recherche → audit</li>
-      <li>Un résultat honnête : la combinaison bat <b>de peu</b> un baseline fort</li>
-      <li>Une cartographie précise de ce que le système ne sait pas faire</li>
+      <li>A complete pipeline: data → models → validation → test → retrieval → audit</li>
+      <li>An honest result: the ensemble beats a strong baseline <b>narrowly</b></li>
+      <li>A precise map of what the system cannot do</li>
     </ul>
     <div class="card b" style="margin-top:auto;display:flex;justify-content:space-between;align-items:center">
-      <p><b>Recommandation :</b> pilote interne, clauses anglaises, juriste dans la boucle, abstention activée.</p>
-      <p class="blue" style="font-size:30px;font-weight:700;white-space:nowrap;margin-left:24px">Utile pour trier, pas pour décider.</p>
+      <p><b>Recommendation:</b> internal pilot, English clauses, lawyer in the loop, abstention enabled.</p>
+      <p class="blue" style="font-size:30px;font-weight:700;white-space:nowrap;margin-left:24px">Useful for triage, not for decisions.</p>
     </div>
   </div>
 </section>
 
 <!-- Annexes -->
-<section class="slide" data-who="C" data-section="Annexe A1 · abstention" data-notes="Courbe couverture / exactitude parmi les traitées ; points = seuils de validation.">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Couverture et exactitude parmi les clauses traitées (test)</h1><div class="fig"><img src="figures/coverage_accuracy.png" alt="Courbe de couverture"></div></div>
+<section class="slide" data-who="C" data-section="Appendix A1 · abstention" data-notes="Coverage / accuracy-among-handled curve; dots = validation thresholds.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Coverage and accuracy among handled clauses (test)</h1><div class="fig"><img src="figures/coverage_accuracy.png" alt="Coverage curve"></div></div>
 </section>
-<section class="slide" data-who="C" data-section="Annexe A2 · calibration" data-notes="Diagramme de fiabilité ; ECE combinaison 0,017, BERT 0,020, TF-IDF 0,024.">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Calibration (diagramme de fiabilité)</h1><div class="fig"><img src="figures/reliability.png" alt="Diagramme de fiabilité"></div></div>
+<section class="slide" data-who="C" data-section="Appendix A2 · calibration" data-notes="Reliability diagram; ECE ensemble 0.017, BERT 0.020, TF-IDF 0.024.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Calibration (reliability diagram)</h1><div class="fig"><img src="figures/reliability.png" alt="Reliability diagram"></div></div>
 </section>
-<section class="slide" data-who="C" data-section="Annexe A3 · par classe" data-notes="F1 par classe selon la fréquence : BERT décroche sur la queue.">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">F1 par classe selon la fréquence d'entraînement</h1><div class="fig"><img src="figures/per_class_f1_vs_frequency.png" alt="F1 par classe"></div></div>
+<section class="slide" data-who="C" data-section="Appendix A3 · per class" data-notes="Per-class F1 by frequency: BERT drops off on the tail.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Per-class F1 by training frequency</h1><div class="fig"><img src="figures/per_class_f1_vs_frequency.png" alt="Per-class F1"></div></div>
 </section>
-<section class="slide" data-who="L" data-section="Annexe A4 · audit par groupe" data-notes="Exactitude par groupe proxy, IC de Wilson ; trait noir = attendu d'après le mix de types. Petits groupes non concluants.">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Exactitude par groupe (proxys par mots-clés)</h1><div class="fig"><img src="figures/slice_accuracy.png" alt="Exactitude par groupe"></div></div>
+<section class="slide" data-who="L" data-section="Appendix A4 · audit by group" data-notes="Accuracy by proxy group, Wilson CIs; black tick = expected from the type mix. Small groups inconclusive.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Accuracy by group (keyword proxies)</h1><div class="fig"><img src="figures/slice_accuracy.png" alt="Accuracy by group"></div></div>
 </section>
-<section class="slide" data-who="L" data-section="Annexe A5 · contrefactuels" data-notes="Taux de changement de type par perturbation, trois variantes.">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Contrefactuels : taux de changement du type prédit</h1><div class="fig"><img src="figures/counterfactual_flips.png" alt="Contrefactuels"></div></div>
+<section class="slide" data-who="L" data-section="Appendix A5 · counterfactuals" data-notes="Type change rate per perturbation, three variants.">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Counterfactuals: predicted-type change rate</h1><div class="fig"><img src="figures/counterfactual_flips.png" alt="Counterfactuals"></div></div>
 </section>
-<section class="slide" data-who="A" data-section="Annexe A6 · données" data-notes="Distribution des classes et longueurs en tokens (EDA).">
-  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Données : distribution des classes et longueurs</h1>
-    <div class="cols"><div class="fig"><img src="figures/class_distribution.png" alt="Distribution des classes"></div><div class="fig"><img src="figures/token_lengths.png" alt="Longueurs en tokens"></div></div>
+<section class="slide" data-who="A" data-section="Appendix A6 · data" data-notes="Class distribution and token lengths (EDA).">
+  <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Data: class distribution and lengths</h1>
+    <div class="cols"><div class="fig"><img src="figures/class_distribution.png" alt="Class distribution"></div><div class="fig"><img src="figures/token_lengths.png" alt="Token lengths"></div></div>
   </div>
 </section>
 
 <div class="progress" id="progress"></div>
 <div class="pageno" id="pageno"></div>
-<div class="hint">← → naviguer · N notes · F plein écran · R rejouer · S images fixes</div>
+<div class="hint">← → navigate · N notes · F full screen · R replay · S still images</div>
 </div></div>
 
 <div id="notes"><h3 id="notes-title"></h3><div id="notes-body"></div></div>
@@ -349,10 +349,10 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
     if (s.dataset.video) {
       const vb = document.createElement("div");
       vb.className = "vbody";
-      vb.title = "Cliquer pour rejouer l'animation";
+      vb.title = "Click to replay the animation";
       s.appendChild(vb);
       const r = document.createElement("div");
-      r.className = "replay"; r.textContent = "animation Manim · clic ou R pour rejouer";
+      r.className = "replay"; r.textContent = "Manim animation · click or R to replay";
       s.appendChild(r);
       vb.addEventListener("click", () => play(s, true));
     }
@@ -402,7 +402,7 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
     document.getElementById("pageno").textContent = (idx + 1) + " / " + slides.length;
     document.getElementById("progress").style.width = ((idx + 1) / slides.length * 100) + "%";
     document.getElementById("notes-title").textContent =
-      "Diapositive " + (idx + 1) + " · " + NAMES[s.dataset.who] + (s.dataset.to ? " → " + NAMES[s.dataset.to] : "");
+      "Slide " + (idx + 1) + " · " + NAMES[s.dataset.who] + (s.dataset.to ? " → " + NAMES[s.dataset.to] : "");
     document.getElementById("notes-body").innerHTML = s.dataset.notes || "";
     try { history.replaceState(null, "", "#" + (idx + 1)); } catch (e) {}
   }
