@@ -23,11 +23,9 @@ artifacts/
 /reports/validation_logs/
 
 # Private presentation-preparation documents
-/presentation/architecture.md
 /presentation/script_soutenance_3_voix.md
 /presentation/slide_plan.md
 /presentation/speaker_notes.md
-/presentation/demo.md
 /presentation/jury_qa.md
 
 # Local Manim development notes
