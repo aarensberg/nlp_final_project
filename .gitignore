@@ -4,11 +4,31 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
+
+# macOS
+.DS_Store
+
+# Project instructions
+/PROJECT_GUIDELINES.md
 
 # Model weights, embeddings, cached logits (rebuilt by the pipeline)
 artifacts/
-.DS_Store
+
+# Historical reports and detailed local validation logs
+/reports/archive/
+/reports/validation_logs/
+
+# Private presentation-preparation documents
+/presentation/architecture.md
+/presentation/script_soutenance_3_voix.md
+/presentation/slide_plan.md
+/presentation/speaker_notes.md
+/presentation/demo.md
+/presentation/jury_qa.md
+
+# Local Manim development notes
+/presentation/manim/README.md
