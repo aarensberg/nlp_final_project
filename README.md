@@ -107,6 +107,8 @@ Prérequis : [uv](https://docs.astral.sh/uv/). Les dépendances sont verrouillé
 
 Démonstration commentée, échec contrôlé compris : [presentation/demo.md](presentation/demo.md).
 
+Slides de soutenance : [presentation/slides/index.html](presentation/slides/index.html), export PDF 16:9 dans [presentation/slides/nlp_defense_slides.pdf](presentation/slides/nlp_defense_slides.pdf) (régénération : `cd presentation/slides && npm install && npm run export-pdf`, voir [presentation/slides/README.md](presentation/slides/README.md)).
+
 ## 5. Entraînement : choix, provenance, hypothèses
 
 | Choix | Valeur | Raison |

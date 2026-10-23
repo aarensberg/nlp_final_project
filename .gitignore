@@ -30,3 +30,10 @@ artifacts/
 
 # Local Manim development notes
 /presentation/manim/README.md
+
+# Ignore files used to generate the PDF version of the slides
+presentation/slides/*
+!presentation/slides/index.html
+!presentation/slides/figures/
+!presentation/slides/media/
+!presentation/slides/nlp_defense_slides.pdf
