@@ -20,8 +20,6 @@ Tous les chiffres viennent de [presentation/key_numbers.md](presentation/key_num
 - **Recherche** clause → clauses similaires : P@1 77,4 %, P@10 66,4 % (pertinence = même label LEDGAR). La question « 30-day notice » **échoue** (§7).
 - **Faiblesses** : classes rares, labels quasi synonymes, clauses de bail, préavis de N jours, types de clauses absents de LEDGAR.
 
-**Remise et soutenance** : voir [§14](#14-remise-et-soutenance).
-
 ---
 
 ## Sommaire
