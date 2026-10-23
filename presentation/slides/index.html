@@ -77,35 +77,30 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 <div id="viewport"><div id="stage">
 
 <!-- 1 ─ Titre -->
-<section class="slide" data-who="A" data-section="Opening"
- data-notes="Introduce the topic and the team; announce who covers what. Say “research prototype” right away.">
+<section class="slide" data-who="L" data-section="Opening"
+ data-notes="Introduce the topic and the team; announce who covers what (Louis · problem, data, conclusion; Charles · classification; Alessandro · retrieval, audit, reproducibility). Say “research prototype” right away.">
   <div class="title-wrap">
     <div class="kicker">Deep Learning for Sequential Data &amp; NLP · Final project</div>
     <h1>NLP core of a<br>contract-review assistant</h1>
     <div class="sub">Classify clauses, retrieve precedents, and document where the system can — and cannot — be trusted. Data: LEDGAR (LexGLUE).</div>
     <div class="badge">Research prototype · English clauses (SEC) · not a substitute for a lawyer</div>
-    <div class="team">
-      <div style="color:var(--alessandro)">Alessandro · problem, data, conclusion</div>
-      <div style="color:var(--charles)">Charles · classification</div>
-      <div style="color:var(--louis)">Louis · retrieval, audit, reproducibility</div>
-    </div>
   </div>
 </section>
 
 <!-- 2 ─ Besoin métier -->
-<section class="slide" data-who="A" data-section="Problem" data-video="S02BusinessNeed"
+<section class="slide" data-who="L" data-section="Problem" data-video="S02BusinessNeed"
  data-notes="Three needs: classify (100 types), retrieve, prove / flag. European clients: no black box. <span class='w'>⚠ Do not say the system “understands” contracts.</span>"></section>
 
 <!-- 3 ─ Pourquoi LEDGAR -->
-<section class="slide" data-who="A" data-section="Data · why LEDGAR" data-video="S03DataSplit"
+<section class="slide" data-who="L" data-section="Data · why LEDGAR" data-video="S03DataSplit"
  data-notes="Only public annotated dataset at this scale + LexGLUE benchmark. Chronological split 60k / 10k / 10k. Rule: tuning on validation, test = measurement only."></section>
 
 <!-- 4 ─ Limites LEDGAR -->
-<section class="slide" data-who="A" data-section="Data · limitations" data-video="S04DataLimits"
+<section class="slide" data-who="L" data-section="Data · limitations" data-video="S04DataLimits"
  data-notes="Imbalance ×138 → macro-F1. English / US law; 253 training clauses outside the United States (keyword proxy). Missing types: GDPR, force majeure, non-compete, limitation of liability. 282 test/train duplicates. <span class='w'>⚠ “outside the United States”, not “European”.</span>"></section>
 
 <!-- 5 ─ Architecture -->
-<section class="slide" data-who="A" data-to="C" data-section="Architecture" data-video="S05Architecture"
+<section class="slide" data-who="L" data-to="C" data-section="Architecture" data-video="S05Architecture"
  data-notes="Two pipelines. Classification: calibrated BERT + TF-IDF, weights 0.2 / 0.8, threshold 0.709 → type or lawyer. Retrieval: N-day filter → dense + BM25 → RRF. Three variants reported. Hand over to Charles."></section>
 
 <!-- 6 ─ TF-IDF -->
@@ -178,15 +173,15 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
  data-notes="Weighted average of calibrated probabilities, weight chosen on validation. Gain +0.73 micro [+0.51; +0.98], +0.65 macro. McNemar: 106 vs 33. A complementary signal, not a revolution. <span class='w'>⚠ McNemar tests the error rate, not macro-F1.</span>"></section>
 
 <!-- 10 ─ Abstention -->
-<section class="slide" data-who="C" data-to="L" data-section="Calibration and abstention" data-video="S10Abstention"
- data-notes="Temperatures on validation; ECE 0.017. Threshold 0.709 = lowest threshold reaching 95% on validation. Test: 84.2% handled, 94.5% correct; ~1 clause in 6 goes to the lawyer, by design. <span class='w'>⚠ 95% = target, not a guarantee. Confidence = type, not legal validity.</span> Hand over to Louis."></section>
+<section class="slide" data-who="C" data-to="A" data-section="Calibration and abstention" data-video="S10Abstention"
+ data-notes="Temperatures on validation; ECE 0.017. Threshold 0.709 = lowest threshold reaching 95% on validation. Test: 84.2% handled, 94.5% correct; ~1 clause in 6 goes to the lawyer, by design. <span class='w'>⚠ 95% = target, not a guarantee. Confidence = type, not legal validity.</span> Hand over to Alessandro."></section>
 
 <!-- 11 ─ Recherche -->
-<section class="slide" data-who="L" data-section="Retrieval" data-video="S11Retrieval"
+<section class="slide" data-who="A" data-section="Retrieval" data-video="S11Retrieval"
  data-notes="Bank of 59,080 clauses. Dense (meaning) + BM25 (exact words), RRF fusion 1/(60+rank). 981 queries: P@1 77.4%, P@10 66.4%. <span class='w'>⚠ Relevance = same label. 40 already-seen questions = non-regression (hybrid P@1 92.5%).</span>"></section>
 
 <!-- 12 ─ Exemple réussi -->
-<section class="slide" data-who="L" data-section="Retrieval · successful example"
+<section class="slide" data-who="A" data-section="Retrieval · successful example"
  data-notes="Wording close to the clauses: 5/5 Terminations with a thirty-day notice. Say “real recorded output” if there is no live demo. Set up: “look at what happens if we rephrase”.">
   <div class="body">
     <h1>Successful example: wording close to a clause</h1>
@@ -207,19 +202,19 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 </section>
 
 <!-- 13 ─ Échec contrôlé -->
-<section class="slide" data-who="L" data-section="Retrieval · controlled failure" data-video="S13ControlledFailure"
+<section class="slide" data-who="A" data-section="Retrieval · controlled failure" data-video="S13ControlledFailure"
  data-notes="“show me termination clauses with a 30-day notice period”: 1st result Notices, 30 days to give notice of a Good Reason; 1st Terminations in 4th position; 1 relevant out of 10. The filter checks the MENTION, not the role. Fix: structured extraction (role + duration + day type). <span class='w'>⚠ Do not say that retrieval understands notice periods.</span>"></section>
 
 <!-- 14 ─ Audit -->
-<section class="slide" data-who="L" data-section="Audit" data-video="S14Audit"
+<section class="slide" data-who="A" data-section="Audit" data-video="S14Audit"
  data-notes="Groups: leases 75.2% vs 84.3% expected; tail 84.3% correct after abstention. Counterfactuals: he↔she 2.3%, jurisdiction 3.6%, OCR 5.4%. Out of scope: ensemble 8/8 abstentions; BERT alone GDPR → General at 0.90. <span class='w'>⚠ Keyword proxies; she (37) and non-US (36) groups too small; stable type ≠ legal equivalence.</span>"></section>
 
 <!-- 15 ─ Reproductibilité -->
-<section class="slide" data-who="L" data-to="A" data-section="Reproducibility" data-video="S15Reproducibility"
- data-notes="uv.lock, pinned revisions, fingerprints, manifest; 92 tests on a clean copy; bit-identical logits. Not demonstrated: another machine, seed variance, beta Python. <span class='w'>⚠ “reproducible on this machine”.</span> Hand over to Alessandro."></section>
+<section class="slide" data-who="A" data-to="L" data-section="Reproducibility" data-video="S15Reproducibility"
+ data-notes="uv.lock, pinned revisions, fingerprints, manifest; 92 tests on a clean copy; bit-identical logits. Not demonstrated: another machine, seed variance, beta Python. <span class='w'>⚠ “reproducible on this machine”.</span> Hand over to Louis."></section>
 
 <!-- 16 ─ Usages -->
-<section class="slide" data-who="A" data-section="Uses"
+<section class="slide" data-who="L" data-section="Uses"
  data-notes="Turn the audit into usage rules. Stress: classifying a type ≠ judging its validity.">
   <div class="body">
     <h1>Permitted and prohibited uses</h1>
@@ -250,7 +245,7 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 </section>
 
 <!-- 17 ─ Limites -->
-<section class="slide" data-who="A" data-section="Limitations and next steps"
+<section class="slide" data-who="L" data-section="Limitations and next steps"
  data-notes="Own it without apologising; show that we know what to do next. The 512-token / more-epochs experiment is proposed, not done.">
   <div class="body">
     <h1>Limitations and next steps</h1>
@@ -279,7 +274,7 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 </section>
 
 <!-- 18 ─ Conclusion -->
-<section class="slide" data-who="A" data-section="Conclusion"
+<section class="slide" data-who="L" data-section="Conclusion"
  data-notes="Three messages, then the recommendation. End on “useful for triage, not for decisions”, then open the floor to questions.">
   <div class="body">
     <h1>Conclusion</h1>
@@ -310,13 +305,13 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
 <section class="slide" data-who="C" data-section="Appendix A3 · per class" data-notes="Per-class F1 by frequency: BERT drops off on the tail.">
   <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Per-class F1 by training frequency</h1><div class="fig"><img src="figures/per_class_f1_vs_frequency.png" alt="Per-class F1"></div></div>
 </section>
-<section class="slide" data-who="L" data-section="Appendix A4 · audit by group" data-notes="Accuracy by proxy group, Wilson CIs; black tick = expected from the type mix. Small groups inconclusive.">
+<section class="slide" data-who="A" data-section="Appendix A4 · audit by group" data-notes="Accuracy by proxy group, Wilson CIs; black tick = expected from the type mix. Small groups inconclusive.">
   <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Accuracy by group (keyword proxies)</h1><div class="fig"><img src="figures/slice_accuracy.png" alt="Accuracy by group"></div></div>
 </section>
-<section class="slide" data-who="L" data-section="Appendix A5 · counterfactuals" data-notes="Type change rate per perturbation, three variants.">
+<section class="slide" data-who="A" data-section="Appendix A5 · counterfactuals" data-notes="Type change rate per perturbation, three variants.">
   <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Counterfactuals: predicted-type change rate</h1><div class="fig"><img src="figures/counterfactual_flips.png" alt="Counterfactuals"></div></div>
 </section>
-<section class="slide" data-who="A" data-section="Appendix A6 · data" data-notes="Class distribution and token lengths (EDA).">
+<section class="slide" data-who="L" data-section="Appendix A6 · data" data-notes="Class distribution and token lengths (EDA).">
   <div class="body"><h1 style="font-size:34px;margin-bottom:16px">Data: class distribution and lengths</h1>
     <div class="cols"><div class="fig"><img src="figures/class_distribution.png" alt="Class distribution"></div><div class="fig"><img src="figures/token_lengths.png" alt="Token lengths"></div></div>
   </div>
@@ -341,10 +336,7 @@ th{color:var(--muted);font-weight:600;font-size:18px;text-transform:uppercase;le
     const top = document.createElement("div");
     top.className = "top";
     const who = s.dataset.who, to = s.dataset.to;
-    top.innerHTML = '<div class="section">' + (s.dataset.section || "") + '</div>' +
-      '<div class="who ' + who + '">' + NAMES[who] +
-      (to ? '<span class="arrow">→</span><span style="color:var(--' + NAMES[to].toLowerCase() + ')">' + NAMES[to] + '</span>' : '') +
-      '</div>';
+    top.innerHTML = '<div class="section">' + (s.dataset.section || "") + '</div>';
     s.prepend(top);
     if (s.dataset.video) {
       const vb = document.createElement("div");

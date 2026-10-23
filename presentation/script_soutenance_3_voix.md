@@ -1,4 +1,4 @@
-# Script de soutenance à trois voix — Alessandro · Charles · Louis
+# Script de soutenance à trois voix — Louis · Charles · Alessandro
 
 Support associé : [slides/index.html](slides/index.html) (18 diapositives + 6 annexes pour les questions ; 11 animations Manim).
 Commandes du support : ← → naviguer · **N** notes orateur · **F** plein écran · **R** rejouer l'animation · **S** images fixes (plan B si une vidéo ne se lit pas).
@@ -32,31 +32,31 @@ Chiffres : tous repris de [key_numbers.md](key_numbers.md), lui-même généré 
 
 | # | Section | Diapositive | Intervenant | Durée | Visuel |
 |---|---|---|---|---|---|
-| 1 | Ouverture | Titre | Alessandro | 0:20 | — |
-| 2 | Problème | Le besoin métier | Alessandro | 0:50 | Manim : juriste → assistant → 3 sorties |
-| 3 | Données | Pourquoi LEDGAR | Alessandro | 0:45 | Manim : découpage chronologique |
-| 4 | Données | Les limites de LEDGAR | Alessandro | 0:50 | Manim : déséquilibre + types absents |
-| 5 | Architecture | Vue d'ensemble | Alessandro → Charles | 0:50 | Manim : architecture complète |
+| 1 | Ouverture | Titre | Louis | 0:20 | — |
+| 2 | Problème | Le besoin métier | Louis | 0:50 | Manim : juriste → assistant → 3 sorties |
+| 3 | Données | Pourquoi LEDGAR | Louis | 0:45 | Manim : découpage chronologique |
+| 4 | Données | Les limites de LEDGAR | Louis | 0:50 | Manim : déséquilibre + types absents |
+| 5 | Architecture | Vue d'ensemble | Louis → Charles | 0:50 | Manim : architecture complète |
 | 6 | Classification | Baseline TF-IDF | Charles | 0:35 | — |
 | 7 | Classification | Fine-tuning Legal-BERT | Charles | 0:50 | — |
 | 8 | Résultats | Trois variantes comparées | Charles | 1:00 | Manim : barres + IC 95 % |
 | 9 | Classification | La combinaison | Charles | 0:45 | Manim : formule + 2 exemples réels |
-| 10 | Fiabilité | Calibration et abstention | Charles → Louis | 0:55 | Manim : 100 clauses (courbe de couverture en annexe A1) |
-| 11 | Recherche | Dense + BM25 + RRF | Louis | 0:50 | Manim : pipeline de recherche |
-| 12 | Recherche | Exemple réussi | Louis | 0:30 | sortie réelle |
-| 13 | Recherche | Échec contrôlé « 30-day notice » | Louis | 0:50 | Manim : surlignage du faux positif |
-| 14 | Audit | Groupes, contrefactuels, hors périmètre | Louis | 1:05 | Manim : groupes → contrefactuels → hors périmètre (figure complète en annexe A4) |
-| 15 | Reproductibilité | Chaîne d'empreintes | Louis → Alessandro | 0:40 | Manim : chaîne de traçabilité |
-| 16 | Usages | Autorisés / interdits | Alessandro | 0:40 | — |
-| 17 | Limites | Limites et suite | Alessandro | 0:40 | — |
-| 18 | Conclusion | Recommandation | Alessandro | 0:35 | — |
+| 10 | Fiabilité | Calibration et abstention | Charles → Alessandro | 0:55 | Manim : 100 clauses (courbe de couverture en annexe A1) |
+| 11 | Recherche | Dense + BM25 + RRF | Alessandro | 0:50 | Manim : pipeline de recherche |
+| 12 | Recherche | Exemple réussi | Alessandro | 0:30 | sortie réelle |
+| 13 | Recherche | Échec contrôlé « 30-day notice » | Alessandro | 0:50 | Manim : surlignage du faux positif |
+| 14 | Audit | Groupes, contrefactuels, hors périmètre | Alessandro | 1:05 | Manim : groupes → contrefactuels → hors périmètre (figure complète en annexe A4) |
+| 15 | Reproductibilité | Chaîne d'empreintes | Alessandro → Louis | 0:40 | Manim : chaîne de traçabilité |
+| 16 | Usages | Autorisés / interdits | Louis | 0:40 | — |
+| 17 | Limites | Limites et suite | Louis | 0:40 | — |
+| 18 | Conclusion | Recommandation | Louis | 0:35 | — |
 
 **Logique de répartition.**
-- **Alessandro** pose le cadre (problème, données, architecture), puis revient pour **la décision** : usages, limites, recommandation. Le jury entend la même voix au début et à la fin.
+- **Louis** pose le cadre (problème, données, architecture), puis revient pour **la décision** : usages, limites, recommandation. Le jury entend la même voix au début et à la fin.
 - **Charles** porte tout ce qui touche aux **modèles de classification** : TF-IDF, Legal-BERT, résultats, combinaison, abstention.
-- **Louis** porte la **recherche** et la **preuve de confiance** : exemple, échec contrôlé, audit, reproductibilité.
+- **Alessandro** porte la **recherche** et la **preuve de confiance** : exemple, échec contrôlé, audit, reproductibilité.
 
-**Si le temps est réduit à 10 min** : fusionner 6 et 7 (Charles), raccourcir 12 à une phrase (Louis), fusionner 16 et 17 (Alessandro).
+**Si le temps est réduit à 10 min** : fusionner 6 et 7 (Charles), raccourcir 12 à une phrase (Alessandro), fusionner 16 et 17 (Louis).
 
 ---
 
@@ -66,17 +66,17 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S1] Titre — **Alessandro** (0:20)
+### [S1] Titre — **Louis** (0:20)
 
 *Rôle de la slide : poser le sujet et l'équipe.*
 
-> Bonjour. Nous allons vous présenter le cœur NLP d'un assistant de revue de contrats : il classe les clauses, retrouve des précédents dans une banque de clauses, et documente où on peut lui faire confiance — et où on ne peut pas. Je suis Alessandro, je vais poser le problème et les données ; Charles présentera les modèles de classification ; Louis la recherche, l'audit et la reproductibilité. Je reviendrai pour la recommandation finale.
+> Bonjour. Nous allons vous présenter le cœur NLP d'un assistant de revue de contrats : il classe les clauses, retrouve des précédents dans une banque de clauses, et documente où on peut lui faire confiance — et où on ne peut pas. Je suis Louis, je vais poser le problème et les données ; Charles présentera les modèles de classification ; Alessandro la recherche, l'audit et la reproductibilité. Je reviendrai pour la recommandation finale.
 
 ⚠ Dire « prototype de recherche » dès que l'occasion se présente, pas « produit ».
 
 ---
 
-### [S2] Le besoin métier — **Alessandro** (0:50)
+### [S2] Le besoin métier — **Louis** (0:50)
 
 *Rôle : faire comprendre le besoin réel avant toute technique. Animation : un juriste lit des clauses une par une ; l'assistant produit trois sorties.*
 
@@ -91,7 +91,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S3] Pourquoi LEDGAR — **Alessandro** (0:45)
+### [S3] Pourquoi LEDGAR — **Louis** (0:45)
 
 *Rôle : justifier le choix du jeu de données. Animation : frise 2016 → 2019 avec les trois découpages.*
 
@@ -105,7 +105,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S4] Les limites de LEDGAR — **Alessandro** (0:50)
+### [S4] Les limites de LEDGAR — **Louis** (0:50)
 
 *Rôle : poser les limites dès les données, pas à la fin. Animation : barre « Governing Laws 3 167 » contre « Books 23 », puis liste des types absents.*
 
@@ -125,7 +125,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S5] Architecture — **Alessandro**, puis passage à **Charles** (0:50)
+### [S5] Architecture — **Louis**, puis passage à **Charles** (0:50)
 
 *Rôle : donner la carte complète avant le détail. Animation : deux branches de classification fusionnées, seuil, puis branche recherche.*
 
@@ -202,7 +202,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S10] Calibration et abstention — **Charles**, puis passage à **Louis** (0:55)
+### [S10] Calibration et abstention — **Charles**, puis passage à **Alessandro** (0:55)
 
 *Rôle : montrer comment le système sait dire « je ne sais pas ». Animation : 100 carrés (≈ 1 % chacun), 84 traités, 16 renvoyés au juriste, ≈ 5 erreurs malgré tout (84,2 % × 5,5 % ≈ 4,6 %, calcul à partir des deux chiffres du rapport).*
 
@@ -212,14 +212,14 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 >
 > Ensuite, nous avons fixé sur la validation le seuil le plus bas qui atteint 95 % de classifications correctes. Pour la combinaison, ce seuil vaut 0,709. Sur le test, elle traite 84,2 % des clauses, et parmi celles-ci, 94,5 % sont correctement classées. Environ **une clause sur six part chez un juriste : c'est voulu**.
 >
-> Attention : 95 % est une **cible de validation**, pas une garantie. Sur le test, d'une autre année, on obtient 94,5 %. Et sur des contrats d'un autre pays, on ne sait pas. Louis va maintenant vous montrer la recherche de précédents.
+> Attention : 95 % est une **cible de validation**, pas une garantie. Sur le test, d'une autre année, on obtient 94,5 %. Et sur des contrats d'un autre pays, on ne sait pas. Alessandro va maintenant vous montrer la recherche de précédents.
 
 ⚠ Ne jamais dire « le système garantit 95 % ». Dire « vise », « sur la validation ».
 ⚠ La confiance porte sur le **type** de clause, pas sur la validité juridique : la CLI l'écrit elle-même.
 
 ---
 
-### [S11] Recherche : dense + BM25 + RRF — **Louis** (0:50)
+### [S11] Recherche : dense + BM25 + RRF — **Alessandro** (0:50)
 
 *Rôle : expliquer la recherche hybride. Animation : requête → filtre → deux moteurs → fusion → top-k.*
 
@@ -236,7 +236,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S12] Exemple réussi — **Louis** (0:30)
+### [S12] Exemple réussi — **Alessandro** (0:30)
 
 *Rôle : montrer le cas favorable, sortie réelle enregistrée.*
 
@@ -247,7 +247,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S13] Échec contrôlé : « 30-day notice » — **Louis** (0:50)
+### [S13] Échec contrôlé : « 30-day notice » — **Alessandro** (0:50)
 
 *Rôle : montrer volontairement un échec et l'expliquer. Animation : le premier résultat est une clause Notices, « 30 days » surligné, mais le rôle de la durée n'est pas un préavis de résiliation.*
 
@@ -264,7 +264,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S14] Audit — **Louis** (1:05)
+### [S14] Audit — **Alessandro** (1:05)
 
 *Rôle : cartographier où le système est fragile. Animation en trois temps : groupes (bail, classes de queue), contrefactuels, hors périmètre.*
 
@@ -282,7 +282,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S15] Reproductibilité — **Louis**, puis passage à **Alessandro** (0:40)
+### [S15] Reproductibilité — **Alessandro**, puis passage à **Louis** (0:40)
 
 *Rôle : montrer que les chiffres sont traçables. Animation : chaîne uv.lock → révisions figées → artefacts empreintés → manifeste → tests.*
 
@@ -290,13 +290,13 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 >
 > Sur une copie propre, 92 tests passent, et les logits recalculés sont identiques bit à bit.
 >
-> Ce que nous ne démontrons pas : la reproductibilité sur une autre machine, la variance entre graines — nous n'avons qu'un seul run — et nous utilisons une version bêta de Python. Alessandro va conclure.
+> Ce que nous ne démontrons pas : la reproductibilité sur une autre machine, la variance entre graines — nous n'avons qu'un seul run — et nous utilisons une version bêta de Python. Louis va conclure.
 
 ⚠ « Reproductible sur cette machine », jamais « reproductible partout ».
 
 ---
 
-### [S16] Usages autorisés / interdits — **Alessandro** (0:40)
+### [S16] Usages autorisés / interdits — **Louis** (0:40)
 
 *Rôle : traduire l'audit en règles d'usage.*
 
@@ -310,7 +310,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S17] Limites et suite — **Alessandro** (0:40)
+### [S17] Limites et suite — **Louis** (0:40)
 
 *Rôle : assumer les limites et montrer qu'on sait comment avancer.*
 
@@ -320,7 +320,7 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 ---
 
-### [S18] Conclusion — **Alessandro** (0:35)
+### [S18] Conclusion — **Louis** (0:35)
 
 *Rôle : message final et recommandation.*
 
@@ -336,10 +336,10 @@ Conventions : **[S#]** = diapositive ; ⚑ = point à appuyer à l'oral ; ⚠ = 
 
 | Thème | Qui répond | Références |
 |---|---|---|
-| Données, LEDGAR, choix européens, usages | Alessandro | [jury_qa.md](jury_qa.md) Q3, Q15, Q28 |
+| Données, LEDGAR, choix européens, usages | Louis | [jury_qa.md](jury_qa.md) Q3, Q15, Q28 |
 | TF-IDF, BERT, macro-F1, combinaison, calibration, abstention | Charles | Q1–Q2, Q4–Q14, Q16–Q18 |
-| Recherche, audit, reproductibilité, provenance, coûts, confidentialité | Louis | Q19–Q27 |
-| « Et avec deux semaines de plus ? » | Alessandro | Q29 |
+| Recherche, audit, reproductibilité, provenance, coûts, confidentialité | Alessandro | Q19–Q27 |
+| « Et avec deux semaines de plus ? » | Louis | Q29 |
 
 ## Partie E — Annexes du support (questions du jury)
 
